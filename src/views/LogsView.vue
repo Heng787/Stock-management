@@ -35,11 +35,12 @@ const formatDetails = (log) => {
   if (!d) return 'No details available';
 
   switch (log.module) {
-    case 'STOCK':
+    case 'STOCK': {
       const qty = Math.abs(d.quantity || 0);
       const action = d.type === 'IN' ? 'Added' : (d.type === 'OUT' ? 'Removed' : 'Adjusted');
       const prod = d.productName || `Product ${d.productId?.slice(-4) || ''}`;
       return `${action} ${qty} units of ${prod}`;
+    }
     
     case 'PRODUCTS':
       if (log.action === 'CREATE') return `Created new product: ${d.name || 'Unknown'}`;

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { ShoppingCart, Trash2, Tag, Percent, ReceiptText, ChevronRight, User, Warehouse, Minus, Plus, Banknote, CreditCard, Landmark } from 'lucide-vue-next';
+import { ShoppingCart, Trash2, Tag, ReceiptText, ChevronRight, User, Warehouse, Minus, Plus, Banknote, CreditCard, Landmark } from 'lucide-vue-next';
 import { useStockStore } from '../../stores/stock';
 import { useUIStore } from '../../stores/ui';
 import ReceiptModal from './ReceiptModal.vue';
@@ -32,12 +32,7 @@ const subtotal = computed(() => {
 const discountAmount = computed(() => {
   const s = subtotal.value || 0;
   const d = Math.max(0, Number(discount.value) || 0);
-  let amount = 0;
-  if (discountType.value === 'percent') {
-    amount = (s * d) / 100;
-  } else {
-    amount = d;
-  }
+  const amount = discountType.value === 'percent' ? (s * d) / 100 : d;
   // BUG-006: Clamp discount to subtotal
   return Math.min(s, amount);
 });
@@ -229,6 +224,37 @@ const handleCheckout = async () => {
             @click="discountType = 'percent'"
           >
             %
+          </button>
+        </div>
+      </div>
+
+      <!-- Payment Method Selector -->
+      <div class="payment-selector">
+        <label>Payment Method</label>
+        <div class="method-grid">
+          <button 
+            class="method-btn" 
+            :class="{ active: paymentMethod === 'CASH' }"
+            @click="paymentMethod = 'CASH'"
+          >
+            <Banknote :size="20" />
+            <span>Cash</span>
+          </button>
+          <button 
+            class="method-btn" 
+            :class="{ active: paymentMethod === 'CARD' }"
+            @click="paymentMethod = 'CARD'"
+          >
+            <CreditCard :size="20" />
+            <span>Card</span>
+          </button>
+          <button 
+            class="method-btn" 
+            :class="{ active: paymentMethod === 'TRANSFER' }"
+            @click="paymentMethod = 'TRANSFER'"
+          >
+            <Landmark :size="20" />
+            <span>Transfer</span>
           </button>
         </div>
       </div>

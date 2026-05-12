@@ -4,7 +4,7 @@ import { useStockStore } from '../stores/stock';
 import { useUIStore } from '../stores/ui';
 import { 
   Plus, Pencil, Trash2, Truck, Mail, Phone, 
-  MapPin, Search, Star, LayoutGrid, List, Filter, ChevronDown, ArrowUpDown
+  MapPin, Search, Star, LayoutGrid, List, ArrowUpDown
 } from 'lucide-vue-next';
 import SupplierDetailsDrawer from '../components/SupplierDetailsDrawer.vue';
 

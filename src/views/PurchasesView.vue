@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useStockStore } from '../stores/stock';
 import { useUIStore } from '../stores/ui';
-import { Package, Truck, Warehouse, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-vue-next';
+import { Package, Truck, Warehouse, Minus, Plus, ShoppingCart } from 'lucide-vue-next';
 
 const stock = useStockStore();
 const ui = useUIStore();
