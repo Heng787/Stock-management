@@ -1,85 +1,61 @@
-import { useSettingsStore } from '../stores/settings';
+/**
+ * Centralized formatting utilities for the Stock Management system.
+ */
 
-// Rates relative to KHR (1 Unit = X KHR)
-export const KHR_RATES = {
-  USD: 4012.44,
-  EUR: 4710.00,
-  GBP: 5432.09,
-  CNY: 590.75,
-  KHR: 1.00
+export const formatCurrency = (val, currency = 'USD') => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD'
+  }).format(val || 0);
 };
 
-/**
- * Returns the currency symbol based on current settings or override.
- */
-export const getCurrencySymbol = (overrideCurrency) => {
-  const settings = useSettingsStore();
-  const currencyCode = overrideCurrency || settings.config.localization.currency;
+export const formatDate = (dateString, options = {}) => {
+  if (!dateString) return 'N/A';
   
-  const symbols = {
-    USD: '$',
-    EUR: '€',
-    KHR: '៛',
-    GBP: '£',
-    CNY: '¥'
+  const defaultOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    ...options
   };
   
-  return symbols[currencyCode] || '$';
+  return new Date(dateString).toLocaleDateString('en-US', defaultOptions);
 };
 
-/**
- * Converts a USD amount to the target currency.
- */
-export const convertFromUSD = (usdAmount, targetCurrency) => {
-  const amount = Number(usdAmount) || 0;
-  if (targetCurrency === 'USD') return amount;
-  
-  const khrValue = amount * KHR_RATES.USD;
-  const targetRate = KHR_RATES[targetCurrency] || KHR_RATES.USD;
-  
-  return khrValue / targetRate;
+export const formatID = (id) => {
+  if (!id) return 'N/A';
+  return `#${id.slice(-6).toUpperCase()}`;
 };
 
-/**
- * Formats a number with the current currency symbol and exchange rate.
- */
-export const formatPrice = (amount, overrideCurrency) => {
-  const settings = useSettingsStore();
-  const currencyCode = overrideCurrency || settings.config.localization.currency;
-  
-  const convertedValue = convertFromUSD(amount, currencyCode);
-  const symbol = getCurrencySymbol(currencyCode);
-  
-  return `${symbol}${convertedValue.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
+export const getCurrencySymbol = (currency = 'USD') => {
+  try {
+    return (0).toLocaleString('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).replace(/\d/g, '').trim();
+  } catch (e) {
+    return '$';
+  }
 };
 
-/**
- * Returns a string describing the current exchange rate relative to USD.
- */
-export const getCurrentRateText = (overrideCurrency) => {
-  const settings = useSettingsStore();
-  const currencyCode = overrideCurrency || settings.config.localization.currency;
-  if (currencyCode === 'USD') return '1 USD = $1.00';
-  
-  const symbol = getCurrencySymbol(currencyCode);
-  const rate = convertFromUSD(1, currencyCode);
-  
-  return `1 USD = ${symbol}${rate.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
+export const convertFromUSD = (amount, rate = 1) => {
+  return (amount || 0) * (rate || 1);
 };
 
-/**
- * Resolves a potentially relative URL to a full backend URL.
- */
+export const getCurrentRateText = () => {
+  return 'Base Currency: USD';
+};
+
+// Alias for backward compatibility during refactor
+export const formatPrice = formatCurrency;
+
 export const resolveApiUrl = (path) => {
-  if (!path) return null;
+  if (!path) return '';
   if (path.startsWith('http')) return path;
   
-  const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
-  return `${baseUrl}${path}`;
+  const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${baseUrl}${cleanPath}`;
 };

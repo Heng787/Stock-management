@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { useStockStore } from '../stores/stock';
-import { formatPrice, getCurrentRateText } from '../utils/format';
+import { formatCurrency, getCurrentRateText } from '../utils/format';
 import { fetchTrends, fetchTopProducts } from '../api/analyticsApi.js';
 import { fetchActivity } from '../api/activityApi.js';
 import TrendGraph from '../components/charts/TrendGraph.vue';
@@ -79,14 +79,14 @@ const stats = computed(() => [
   },
   { 
     label: 'Stock Value', 
-    value: formatPrice(stock.products.reduce((acc, p) => acc + (p.price * p.quantity), 0)), 
+    value: formatCurrency(stock.products.reduce((acc, p) => acc + (p.price * p.quantity), 0)), 
     icon: DollarSign, 
     color: 'green',
     trend: stockTrend.value
   },
   { 
     label: 'Weekly Sales', 
-    value: formatPrice(salesTrend.value.reduce((a, b) => a + b, 0)),
+    value: formatCurrency(salesTrend.value.reduce((a, b) => a + b, 0)),
     icon: TrendingUp, 
     color: 'purple',
     trend: salesTrend.value

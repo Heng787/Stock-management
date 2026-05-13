@@ -1,10 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useStockStore } from '../stores/stock'
-import { useAuthStore } from '../stores/auth'
-import { useUIStore } from '../stores/ui'
-import { formatPrice } from '../utils/format'
-import BulkImportModal from '../components/BulkImportModal.vue'
+import { useRoute } from 'vue-router'
+
 import {
   Plus,
   Search,
@@ -20,10 +17,19 @@ import {
   Trash2,
   PlusCircle,
   MinusCircle,
-  Pencil
+  Pencil,
+  Download
 } from 'lucide-vue-next'
-import { useRoute } from 'vue-router'
+
+import { useStockStore } from '../stores/stock'
+import { useAuthStore } from '../stores/auth'
+import { useUIStore } from '../stores/ui'
+
+import BulkImportModal from '../components/BulkImportModal.vue'
+
 import client from '../api/client'
+import { formatCurrency } from '../utils/format'
+import { exportToCSV } from '../utils/export'
 
 const stock = useStockStore()
 const auth = useAuthStore()
@@ -152,6 +158,21 @@ const formatDateShort = (dateString) => {
     minute: '2-digit'
   })
 }
+
+const exportProducts = () => {
+  const data = stock.products.map(p => ({
+    SKU: p.sku,
+    Name: p.name,
+    Category: p.categoryId?.name || 'General',
+    Price: p.price,
+    Quantity: p.quantity,
+    'Min Stock': p.minStockLevel,
+    Status: p.quantity <= 0 ? 'OUT OF STOCK' : p.quantity <= p.minStockLevel ? 'LOW STOCK' : 'IN STOCK'
+  }));
+  ui.notify('Generating inventory export...', 'info');
+  exportToCSV(data, 'inventory_export');
+  ui.notify('Inventory exported successfully', 'success');
+};
 
 // Form Refs
 const newProduct = ref({
@@ -316,6 +337,10 @@ const handleBulkImport = async (parsedData) => {
           <UploadCloud :size="20" />
           <span>Import CSV</span>
         </button>
+        <button @click="exportProducts" class="btn btn-outline" style="margin-right: 0.5rem">
+          <Download :size="20" />
+          <span>Export All</span>
+        </button>
         <button v-if="auth.isAdmin" @click="openAddModal" class="btn btn-primary">
           <Plus :size="20" />
           <span>New Product</span>
@@ -381,7 +406,7 @@ const handleBulkImport = async (parsedData) => {
             <h3 class="name">{{ p.name }}</h3>
             <p class="sku">{{ p.sku }}</p>
             <div class="price-row">
-              <span class="price">{{ formatPrice(p.price) }}</span>
+              <span class="price">{{ formatCurrency(p.price) }}</span>
               <span class="quantity">{{ p.quantity }} {{ p.unit || 'units' }}</span>
             </div>
             
@@ -442,7 +467,7 @@ const handleBulkImport = async (parsedData) => {
                 </div>
               </td>
               <td>{{ p.categoryId?.name }}</td>
-              <td class="font-bold">{{ formatPrice(p.price) }}</td>
+              <td class="font-bold">{{ formatCurrency(p.price) }}</td>
               <td>
                 <div class="stock-level">
                   <span 

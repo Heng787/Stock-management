@@ -1,6 +1,6 @@
 <script setup>
 import { X, Calendar, User, Package, Printer, FileText } from 'lucide-vue-next';
-import { formatPrice } from '../utils/format';
+import { formatCurrency } from '../utils/format';
 
 defineProps(['isOpen', 'transaction']);
 defineEmits(['close']);
@@ -49,7 +49,7 @@ const formatDate = (dateString) => {
               <FileText :size="16" />
               <div class="meta-info">
                 <label>Reference ID</label>
-                <span class="mono">#{{ transaction._id.toUpperCase() }}</span>
+                <span class="mono">#{{ transaction?._id?.toUpperCase() }}</span>
               </div>
             </div>
           </div>
@@ -81,9 +81,9 @@ const formatDate = (dateString) => {
               <div v-for="item in transaction.items" :key="item.product" class="item-row">
                 <div class="item-main">
                   <span class="item-name">{{ item.name }}</span>
-                  <span class="item-qty">{{ item.quantity }} x {{ formatPrice(item.price, transaction.currency) }}</span>
+                  <span class="item-qty">{{ item.quantity }} x {{ formatCurrency(item.price, transaction.currency) }}</span>
                 </div>
-                <span class="item-total">{{ formatPrice(item.quantity * item.price, transaction.currency) }}</span>
+                <span class="item-total">{{ formatCurrency(item.quantity * item.price, transaction.currency) }}</span>
               </div>
             </div>
           </div>
@@ -92,20 +92,20 @@ const formatDate = (dateString) => {
           <div class="summary-section card">
             <div class="summary-row">
               <span>Subtotal</span>
-              <span>{{ formatPrice(transaction.total - (transaction.tax || 0) + (transaction.discount || 0), transaction.currency) }}</span>
+              <span>{{ formatCurrency(transaction.total - (transaction.tax || 0) + (transaction.discount || 0), transaction.currency) }}</span>
             </div>
             <div class="summary-row" v-if="transaction.discount > 0">
               <span>Discount</span>
-              <span class="discount">-{{ formatPrice(transaction.discount, transaction.currency) }}</span>
+              <span class="discount">-{{ formatCurrency(transaction.discount, transaction.currency) }}</span>
             </div>
             <div class="summary-row">
               <span>Tax (10%)</span>
-              <span>{{ formatPrice(transaction.tax || 0, transaction.currency) }}</span>
+              <span>{{ formatCurrency(transaction.tax || 0, transaction.currency) }}</span>
             </div>
             <div class="summary-row total">
               <span>Grand Total</span>
               <span :style="{ color: getStatusColor(transaction.type) }">
-                {{ transaction.type === 'SALE' ? '+' : '-' }}{{ formatPrice(transaction.total, transaction.currency) }}
+                {{ transaction.type === 'SALE' ? '+' : '-' }}{{ formatCurrency(transaction.total, transaction.currency) }}
               </span>
             </div>
             <div class="summary-row payment">

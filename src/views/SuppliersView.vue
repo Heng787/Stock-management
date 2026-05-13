@@ -69,6 +69,12 @@ const getActivePOs = (supplierId) => {
   ).length;
 };
 
+const getTotalOrders = (supplierId) => {
+  return stock.transactions.filter(t => 
+    (t.supplier?._id === supplierId || t.supplier === supplierId)
+  ).length;
+};
+
 const viewProfile = (supplier) => {
   selectedSupplier.value = supplier;
   isDrawerOpen.value = true;
@@ -79,6 +85,7 @@ const openModal = (supplier = null) => {
     editingSupplier.value = supplier._id;
     supplierForm.value = {
       name: supplier.name || '',
+      contactPerson: supplier.contactPerson || '',
       email: supplier.email || '',
       phone: supplier.phone || '',
       address: supplier.address || '',
@@ -86,7 +93,7 @@ const openModal = (supplier = null) => {
     };
   } else {
     editingSupplier.value = null;
-    supplierForm.value = { name: '', email: '', phone: '', address: '', rating: 5 };
+    supplierForm.value = { name: '', contactPerson: '', email: '', phone: '', address: '', rating: 5 };
   }
   isModalOpen.value = true;
 };
@@ -200,8 +207,8 @@ const handleDelete = async (id) => {
 
           <div class="stats">
             <div class="stat">
-              <span class="label">Active POs</span>
-              <span class="value">{{ getActivePOs(supplier._id) }}</span>
+              <span class="label">Total Orders</span>
+              <span class="value">{{ getTotalOrders(supplier._id) }}</span>
             </div>
             <div class="stat">
               <span class="label">Rating</span>
@@ -272,6 +279,10 @@ const handleDelete = async (id) => {
           <div class="input-group">
             <label for="supplier-name">Company Name *</label>
             <input id="supplier-name" v-model="supplierForm.name" required placeholder="e.g. Global Tech Supplies" />
+          </div>
+          <div class="input-group">
+            <label for="supplier-contact">Contact Person</label>
+            <input id="supplier-contact" v-model="supplierForm.contactPerson" placeholder="John Doe" />
           </div>
           <div class="input-group">
             <label for="supplier-email">Email Address</label>

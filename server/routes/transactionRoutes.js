@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/authGuard.js';
-import { createTransaction } from '../services/transactionService.js';
+import { createTransaction, getTransactions } from '../services/transactionService.js';
 import Transaction from '../models/Transaction.js';
 
 const router = express.Router();
@@ -8,13 +8,12 @@ router.use(protect);
 
 router.get('/', async (req, res) => {
   try {
-    const transactions = await Transaction.find()
-      .populate('items.product', 'name sku')
-      .populate('warehouse', 'name')
-      .populate('customer', 'name')
-      .populate('supplier', 'name')
-      .sort({ createdAt: -1 });
-    res.json({ success: true, data: transactions });
+    const result = await getTransactions(req.query);
+    res.json({ 
+      success: true, 
+      data: result.transactions,
+      pagination: result.pagination
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

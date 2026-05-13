@@ -11,8 +11,8 @@ export const getValuation = async (req, res, next) => {
 
 export const getStats = async (req, res, next) => {
   try {
-    const days = parseInt(req.query.days) || 30;
-    const data = await analyticsService.getSalesReport(days);
+    const { startDate, endDate, days } = req.query;
+    const data = await analyticsService.getSalesReport(parseInt(days) || 30, startDate, endDate);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -21,7 +21,8 @@ export const getStats = async (req, res, next) => {
 
 export const getTrends = async (req, res, next) => {
   try {
-    const data = await analyticsService.getSalesTrends();
+    const { startDate, endDate } = req.query;
+    const data = await analyticsService.getSalesTrends(startDate, endDate);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -30,7 +31,8 @@ export const getTrends = async (req, res, next) => {
 
 export const getTopProducts = async (req, res, next) => {
   try {
-    const data = await analyticsService.getTopSellingProducts();
+    const { startDate, endDate } = req.query;
+    const data = await analyticsService.getTopSellingProducts(startDate, endDate);
     res.json({ success: true, data });
   } catch (err) {
     next(err);

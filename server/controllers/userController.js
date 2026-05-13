@@ -1,26 +1,38 @@
-import User from '../models/User.js';
+// d:\Work\Stock Management\server\controllers\userController.js
+import * as userService from '../services/userService.js';
 import { logActivity } from '../services/auditService.js';
 
-export const getUsers = async (req, res) => {
+/**
+ * @desc    Get all users
+ * @route   GET /api/users
+ * @access  Admin
+ */
+export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find({}).select('-password');
-    res.json({ success: true, data: users });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Server error' });
+    const users = await userService.getAllUsers();
+    res.status(200).json({ success: true, data: users });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const createUser = async (req, res) => {
+/**
+ * @desc    Create a new user
+ * @route   POST /api/users
+ * @access  Admin
+ */
+export const createUser = async (req, res, next) => {
   try {
     const { name, email, password, role, dob, contact } = req.body;
     
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ error: 'User already exists' });
+    const userExists = await userService.findUserByEmail(email);
+    if (userExists) {
+      return res.status(400).json({ success: false, error: 'User already exists' });
+    }
 
-    // Use default password if not provided
     const finalPassword = password || 'Staff123!';
 
-    const user = await User.create({ 
+    const user = await userService.createUser({ 
       name, 
       email, 
       password: finalPassword, 
@@ -43,17 +55,24 @@ export const createUser = async (req, res) => {
         status: user.status
       }
     });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const updateUser = async (req, res) => {
+/**
+ * @desc    Update a user
+ * @route   PUT /api/users/:id
+ * @access  Admin
+ */
+export const updateUser = async (req, res, next) => {
   try {
     const { name, email, role, status, dob, contact } = req.body;
-    const user = await User.findById(req.params.id);
+    const user = await userService.getUserById(req.params.id);
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
 
     user.name = name || user.name;
     user.email = email || user.email;
@@ -66,7 +85,7 @@ export const updateUser = async (req, res) => {
     
     await logActivity('UPDATE', 'USERS', { name, email, role, status }, req.user._id);
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         _id: updatedUser._id,
@@ -78,22 +97,29 @@ export const updateUser = async (req, res) => {
         status: updatedUser.status
       }
     });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const deleteUser = async (req, res) => {
+/**
+ * @desc    Delete a user
+ * @route   DELETE /api/users/:id
+ * @access  Admin
+ */
+export const deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await userService.getUserById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
 
-    await User.deleteOne({ _id: req.params.id });
+    await userService.deleteUserById(req.params.id);
     
     await logActivity('DELETE', 'USERS', { name: user.name, email: user.email }, req.user._id);
 
-    res.json({ success: true, message: 'User deleted' });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(200).json({ success: true, message: 'User deleted' });
+  } catch (error) {
+    next(error);
   }
 };

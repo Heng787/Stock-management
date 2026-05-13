@@ -1,6 +1,6 @@
 <script setup>
 import { Printer, X, CheckCircle2 } from 'lucide-vue-next';
-import { formatPrice } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 
 defineProps(['isOpen', 'transaction', 'customer', 'items', 'currency']);
 defineEmits(['close']);
@@ -50,7 +50,7 @@ const printReceipt = () => {
             <tr v-for="item in items" :key="item.product">
               <td>{{ item.name }}</td>
               <td>{{ item.quantity }}</td>
-              <td class="text-right">{{ formatPrice(item.price * item.quantity, currency) }}</td>
+              <td class="text-right">{{ formatCurrency(item.price * item.quantity, currency) }}</td>
             </tr>
           </tbody>
         </table>
@@ -60,19 +60,19 @@ const printReceipt = () => {
         <div class="totals-section">
           <div class="row">
             <span>Subtotal</span>
-            <span>{{ formatPrice(transaction?.total - (transaction?.tax || 0) + (transaction?.discount || 0), currency) }}</span>
+            <span>{{ formatCurrency(transaction?.total - (transaction?.tax || 0) + (transaction?.discount || 0), currency) }}</span>
           </div>
           <div class="row" v-if="transaction?.discount > 0">
             <span>Discount</span>
-            <span>-{{ formatPrice(transaction?.discount, currency) }}</span>
+            <span>-{{ formatCurrency(transaction?.discount, currency) }}</span>
           </div>
           <div class="row">
             <span>Tax (10%)</span>
-            <span>{{ formatPrice(transaction?.tax, currency) }}</span>
+            <span>{{ formatCurrency(transaction?.tax, currency) }}</span>
           </div>
           <div class="row grand-total">
             <span>GRAND TOTAL</span>
-            <span>{{ formatPrice(transaction?.total, currency) }}</span>
+            <span>{{ formatCurrency(transaction?.total, currency) }}</span>
           </div>
           <div class="row payment-method">
             <span>Payment Method</span>

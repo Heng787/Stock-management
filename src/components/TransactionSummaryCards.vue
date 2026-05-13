@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { ArrowUpRight, ArrowDownRight, Scale } from 'lucide-vue-next';
+import { formatCurrency } from '../utils/format';
 
 const props = defineProps({
   transactions: {
@@ -25,12 +26,6 @@ const stats = computed(() => {
   };
 });
 
-const formatCurrency = (val) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(val);
-};
 </script>
 
 <template>

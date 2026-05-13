@@ -4,21 +4,19 @@ import Customer from '../models/Customer.js';
 import { createNotification } from './notificationService.js';
 
 export const createTransaction = async (data, userId) => {
-  const { type, items, warehouseId, entityId } = data;
+  const { type, items, warehouseId, entityId, total, currency, paymentMethod, notes, discount, tax, exchangeRate = 1 } = data;
 
-  // Strict Validation (Crucial without transactions)
+  // 1. Validation
+  if (!warehouseId) throw new Error('Warehouse ID is required');
   if (!items || items.length === 0) throw new Error('No items provided');
   if (items.some(i => i.quantity <= 0)) throw new Error('Quantities must be positive');
+  if (total == null) throw new Error('Transaction total is required');
 
-
-
-  // Process items sequentially
+  // 2. Process items sequentially with atomic sufficiency checks
   for (const item of items) {
     const adjustment = type === 'SALE' ? -item.quantity : item.quantity;
-    // total += item.price * item.quantity; // We now use the total passed from frontend
-
-    // 1. Check if warehouse entry exists
-    let product = await Product.findOne({ _id: item.product });
+    
+    let product = await Product.findById(item.product);
     if (!product) throw new Error(`Product ${item.product} not found`);
 
     const hasWarehouseEntry = (product.warehouseStock || []).some(ws => 
@@ -34,44 +32,49 @@ export const createTransaction = async (data, userId) => {
       );
     }
 
-    // 2. Atomic increment
+    // Atomic update with sufficiency check for SALES
+    const query = { 
+      _id: item.product, 
+      'warehouseStock.warehouse': warehouseId 
+    };
+    
+    if (type === 'SALE') {
+      query['warehouseStock.quantity'] = { $gte: item.quantity };
+    }
+
     const updatedProduct = await Product.findOneAndUpdate(
-      { _id: item.product, 'warehouseStock.warehouse': warehouseId },
+      query,
       { $inc: { 'warehouseStock.$.quantity': adjustment, quantity: adjustment } },
       { new: true, runValidators: true }
     );
 
-    // 3. Rollback safety (Manual)
-    const targetWS = updatedProduct.warehouseStock.find(ws => 
-      ws && ws.warehouse && ws.warehouse.toString() === warehouseId.toString()
-    );
-
-    if (targetWS && targetWS.quantity < 0) {
-      // Reverse the adjustment if it went negative (Simulated rollback)
-      await Product.findOneAndUpdate(
-        { _id: item.product, 'warehouseStock.warehouse': warehouseId },
-        { $inc: { 'warehouseStock.$.quantity': -adjustment, quantity: -adjustment } }
-      );
-      throw new Error(`Insufficient stock for ${product.name} in this warehouse`);
+    if (!updatedProduct) {
+      throw new Error(`Insufficient stock for ${product.name} in selected warehouse`);
     }
   }
 
-  const exchangeRate = data.exchangeRate || 1;
-  const total = data.total; 
   const totalUSD = total / exchangeRate;
 
   const transactionData = {
-    ...data,
+    type,
+    items,
     total,
+    currency: currency || 'USD',
+    exchangeRate,
+    discount: discount || 0,
+    tax: tax || 0,
     warehouse: warehouseId,
     createdBy: userId,
-    paymentMethod: data.paymentMethod || 'CASH',
+    paymentMethod: paymentMethod || 'CASH',
+    paymentDetails: data.paymentDetails,
+    expectedDate: data.expectedDate,
+    notes,
     [type === 'SALE' ? 'customer' : 'supplier']: entityId
   };
 
   const transaction = await Transaction.create(transactionData);
 
-  if (type === 'SALE') {
+  if (type === 'SALE' && entityId) {
     await Customer.findByIdAndUpdate(entityId, {
       $inc: { totalSpent: totalUSD, orderCount: 1 }
     });
@@ -80,10 +83,52 @@ export const createTransaction = async (data, userId) => {
     await createNotification({
       type: 'SALE',
       title: 'New Sale Completed',
-      message: `Order #${transaction._id.toString().slice(-6).toUpperCase()} processed successfully (${data.currency || 'USD'} ${total.toFixed(2)})`,
+      message: `Order #${transaction._id.toString().slice(-6).toUpperCase()} processed successfully (${currency || 'USD'} ${total.toFixed(2)})`,
       link: '/history'
     });
   }
 
   return transaction;
+};
+
+export const getTransactions = async (query = {}) => {
+  const { page = 1, limit = 20, startDate, endDate } = query;
+  const skip = (page - 1) * limit;
+
+  const filter = {};
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) {
+      const start = new Date(startDate);
+      if (isNaN(start.getTime())) throw new Error('Invalid start date format');
+      filter.createdAt.$gte = start;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      if (isNaN(end.getTime())) throw new Error('Invalid end date format');
+      end.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = end;
+    }
+  }
+
+  const transactions = await Transaction.find(filter)
+    .populate('items.product', 'name sku')
+    .populate('warehouse', 'name')
+    .populate('customer', 'name')
+    .populate('supplier', 'name')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await Transaction.countDocuments(filter);
+
+  return {
+    transactions,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  };
 };

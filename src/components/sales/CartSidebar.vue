@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { ShoppingCart, Trash2, Tag, ReceiptText, ChevronRight, User, Warehouse, Minus, Plus, Banknote, CreditCard, Landmark } from 'lucide-vue-next';
 import { useStockStore } from '../../stores/stock';
 import { useUIStore } from '../../stores/ui';
-import { formatPrice, getCurrencySymbol, convertFromUSD } from '../../utils/format';
+import { formatCurrency, getCurrencySymbol, convertFromUSD } from '../../utils/format';
 import ReceiptModal from './ReceiptModal.vue';
 
 const props = defineProps(['cart', 'warehouseId', 'customerId', 'warehouses', 'customers', 'currency']);
@@ -128,7 +128,7 @@ const handleCheckout = async () => {
 
     const res = await stock.createTransaction({
       type: 'SALE',
-      customerId: props.customerId,
+      entityId: props.customerId,
       warehouseId: props.warehouseId,
       items: props.cart.map(i => ({ 
         product: i.product, 
@@ -221,7 +221,7 @@ const handleCheckout = async () => {
             <p class="sku">{{ item.sku }}</p>
           </div>
           <div class="item-price-block">
-            <p class="price">{{ formatPrice(item.price * item.quantity, currency) }}</p>
+            <p class="price">{{ formatCurrency(item.price * item.quantity, currency) }}</p>
             <div class="item-actions">
               <div class="qty-control">
                 <button @click="updateItemQty(item.product, -1)"><Minus :size="12" /></button>
@@ -247,20 +247,20 @@ const handleCheckout = async () => {
       <div class="totals-box">
         <div class="line grand-total">
           <span class="label">Total</span>
-          <span class="big-amount">{{ formatPrice(grandTotal, currency) }}</span>
+          <span class="big-amount">{{ formatCurrency(grandTotal, currency) }}</span>
         </div>
         <div class="summary-details">
           <div class="line">
             <span>Subtotal</span>
-            <span>{{ formatPrice(subtotal, currency) }}</span>
+            <span>{{ formatCurrency(subtotal, currency) }}</span>
           </div>
           <div class="line">
             <span>Tax (10%)</span>
-            <span>{{ formatPrice(taxAmount, currency) }}</span>
+            <span>{{ formatCurrency(taxAmount, currency) }}</span>
           </div>
           <div class="line discount" v-if="discountAmount > 0">
             <span>Discount</span>
-            <span>-{{ formatPrice(discountAmount, currency) }}</span>
+            <span>-{{ formatCurrency(discountAmount, currency) }}</span>
           </div>
         </div>
       </div>

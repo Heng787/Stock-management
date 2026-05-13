@@ -117,7 +117,23 @@ const fullLogoUrl = computed(() => {
 .section-header h2 { margin-bottom: 0.5rem; font-weight: 800; }
 .settings-form { display: flex; flex-direction: column; gap: 2rem; }
 .logo-upload { display: flex; align-items: center; gap: 2rem; padding: 1.5rem; border: 1.5px dashed var(--border-color); background: transparent; }
-.current-logo { width: 80px; height: 80px; border-radius: 16px; background: var(--hover-color); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border-color); }
+.current-logo { 
+  width: 64px; 
+  height: 64px; 
+  border-radius: 12px; 
+  background: var(--hover-color); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  overflow: hidden; 
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.current-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .logo-placeholder { color: var(--text-muted); }
 .upload-info h3 { font-size: 1rem; margin-bottom: 0.25rem; font-weight: 700; }
 .upload-info p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }

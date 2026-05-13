@@ -2,13 +2,14 @@
 import { ref, computed } from 'vue';
 import { useStockStore } from '../stores/stock';
 import { useUIStore } from '../stores/ui';
-import { Package, Truck, Warehouse, Minus, Plus, ShoppingCart } from 'lucide-vue-next';
+import { Package, Truck, Warehouse, Minus, Plus, ShoppingCart, Calendar } from 'lucide-vue-next';
 
 const stock = useStockStore();
 const ui = useUIStore();
 const cart = ref([]);
 const selectedSupplierId = ref('');
 const selectedWarehouseId = ref('');
+const expectedDate = ref(new Date().toISOString().split('T')[0]);
 
 const toggleProduct = (product) => {
   const index = cart.value.findIndex(item => item.product === product._id);
@@ -47,7 +48,9 @@ const handlePurchase = async () => {
       type: 'PURCHASE',
       items: cart.value.map(i => ({ product: i.product, quantity: i.quantity, price: i.price })),
       entityId: selectedSupplierId.value,
-      warehouseId: selectedWarehouseId.value
+      warehouseId: selectedWarehouseId.value,
+      expectedDate: expectedDate.value,
+      total: totalCost.value
     });
     cart.value = [];
     ui.notify('Stock arrival recorded successfully!', 'success');
@@ -118,6 +121,11 @@ const handlePurchase = async () => {
                   <option v-for="w in stock.warehouses" :key="w._id" :value="w._id">{{ w.name }}</option>
                 </select>
               </div>
+            </div>
+
+            <div class="input-group">
+              <label><Calendar :size="14" /> Promised Arrival Date</label>
+              <input type="date" v-model="expectedDate" class="date-input" />
             </div>
 
             <!-- SELECTED ITEMS LIST -->

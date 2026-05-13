@@ -146,9 +146,15 @@ const close = () => {
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-outline" @click="close">Cancel</button>
-        <button 
-          class="btn btn-primary" 
+        <button
+          class="btn btn-outline"
+          @click="close"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-primary"
           :disabled="!file || parsedData.length === 0 || isParsing"
           @click="handleImport"
         >
@@ -175,13 +181,15 @@ const close = () => {
 }
 
 .modal-content {
+  display: flex;
+  flex-direction: column;
+
   width: 90%;
   max-width: 600px;
+
   background: var(--surface-color);
   border-radius: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
 }
 
 .modal-header {

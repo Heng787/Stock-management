@@ -4,28 +4,38 @@ import { useStockStore } from '../stores/stock';
 import { useUIStore } from '../stores/ui';
 import { 
   ReceiptText, 
-  Search, 
   TrendingUp, 
   ShoppingCart, 
-  Filter, 
   Download, 
-  Calendar,
-  ChevronDown,
   ArrowRight
 } from 'lucide-vue-next';
 import TransactionSummaryCards from '../components/TransactionSummaryCards.vue';
 import BulkActionToolbar from '../components/BulkActionToolbar.vue';
 import TransactionDetailsDrawer from '../components/TransactionDetailsDrawer.vue';
-import { formatPrice } from '../utils/format';
+import TransactionFilters from '../components/TransactionFilters.vue';
+import { formatDate, formatCurrency, formatID } from '../utils/format';
+import { exportToCSV } from '../utils/export';
 
 const stock = useStockStore();
 const ui = useUIStore();
 const searchQuery = ref('');
 const typeFilter = ref('ALL');
-const selectedIds = ref([]); // Switched to array for better reactivity
-const dateRange = ref('30D'); // '7D', '30D', '90D', 'ALL', 'CUSTOM'
+const selectedIds = ref([]);
+const startDate = ref('');
+const endDate = ref('');
 const selectedTransaction = ref(null);
 const isDrawerOpen = ref(false);
+
+const clearDates = () => {
+  startDate.value = '';
+  endDate.value = '';
+};
+
+const clearFilters = () => {
+  clearDates();
+  searchQuery.value = '';
+  typeFilter.value = 'ALL';
+};
 
 onMounted(() => {
   stock.fetchAll();
@@ -48,14 +58,16 @@ const filteredTransactions = computed(() => {
     );
   }
   
-  // Defensive Date filtering
-  if (dateRange.value !== 'ALL' && dateRange.value !== 'CUSTOM') {
-    const now = new Date();
-    const days = parseInt(dateRange.value);
-    if (!isNaN(days)) {
-      const cutoff = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
-      list = list.filter(t => t.createdAt && new Date(t.createdAt) >= cutoff);
-    }
+  if (startDate.value) {
+    const start = new Date(startDate.value);
+    start.setHours(0, 0, 0, 0);
+    list = list.filter(t => t.createdAt && new Date(t.createdAt) >= start);
+  }
+  
+  if (endDate.value) {
+    const end = new Date(endDate.value);
+    end.setHours(23, 59, 59, 999);
+    list = list.filter(t => t.createdAt && new Date(t.createdAt) <= end);
   }
   
   return list;
@@ -79,15 +91,6 @@ const toggleSelect = (id) => {
   }
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-};
-
 const formatTime = (dateString) => {
   if (!dateString) return '--:--';
   return new Date(dateString).toLocaleTimeString('en-US', {
@@ -97,18 +100,50 @@ const formatTime = (dateString) => {
 };
 
 const getStatusColor = (type) => {
-  return type === 'SALE' ? '#10b981' : '#ef4444'; // Green for Sale, Red for Purchase
+  return type === 'SALE' ? '#10b981' : '#ef4444';
 };
 
 const handleBulkDelete = () => {
-  ui.notify(`Deleting ${selectedIds.value.length} transactions...`, 'info');
-  // Logic to call store would go here
+  ui.notify(`Bulk delete functionality pending implementation`, 'info');
   selectedIds.value = [];
 };
 
 const handleBulkExport = () => {
-  ui.notify(`Exporting ${selectedIds.value.length} records to CSV...`, 'success');
+  const dataToExport = stock.transactions
+    .filter(t => selectedIds.value.includes(t._id))
+    .map(t => ({
+      Date: formatDate(t.createdAt),
+      Reference: formatID(t._id),
+      Type: t.type,
+      Status: t.status || 'Completed',
+      Entity: t.customer?.name || t.supplier?.name || 'N/A',
+      Total: t.total
+    }));
+    
+  exportToCSV(dataToExport, 'Selected_Transactions');
+  ui.notify(`Exporting ${selectedIds.value.length} records...`, 'success');
   selectedIds.value = [];
+};
+
+const handleExportAll = () => {
+  if (filteredTransactions.value.length === 0) {
+    ui.notify('No transactions to export', 'warning');
+    return;
+  }
+  
+  const dataToExport = filteredTransactions.value.map(t => ({
+    Date: formatDate(t.createdAt),
+    Reference: formatID(t._id),
+    Type: t.type,
+    Status: t.status || 'Completed',
+    Entity: t.customer?.name || t.supplier?.name || 'Walk-in',
+    Items: (t.items || []).length,
+    Total: t.total,
+    Currency: t.currency
+  }));
+
+  exportToCSV(dataToExport, 'Transactions_Report');
+  ui.notify('Export completed successfully', 'success');
 };
 
 const viewDetails = (t) => {
@@ -125,17 +160,7 @@ const viewDetails = (t) => {
         <p class="subtitle">Review and track all sales and purchase activities.</p>
       </div>
       <div class="header-actions">
-        <div class="date-selector glass">
-          <Calendar :size="16" />
-          <select v-model="dateRange">
-            <option value="7D">Last 7 Days</option>
-            <option value="30D">Last 30 Days</option>
-            <option value="90D">Last 90 Days</option>
-            <option value="ALL">All Time</option>
-            <option value="CUSTOM">Custom Range...</option>
-          </select>
-        </div>
-        <button class="btn btn-secondary">
+        <button @click="handleExportAll" class="btn btn-secondary">
           <Download :size="18" />
           <span>Export List</span>
         </button>
@@ -144,28 +169,21 @@ const viewDetails = (t) => {
 
     <TransactionSummaryCards :transactions="filteredTransactions" />
 
-    <div class="filters-card card glass">
-      <div class="search-box">
-        <Search :size="18" />
-        <input v-model="searchQuery" placeholder="Search by ID, customer or supplier..." />
-      </div>
-      <div class="filter-group">
-        <div class="filter-item">
-          <Filter :size="16" />
-          <select v-model="typeFilter" class="contrast-select">
-            <option value="ALL">All Types</option>
-            <option value="SALE">Sales Only</option>
-            <option value="PURCHASE">Purchases Only</option>
-          </select>
-          <ChevronDown :size="14" />
-        </div>
-      </div>
-    </div>
+    <TransactionFilters 
+      v-model:searchQuery="searchQuery"
+      v-model:startDate="startDate"
+      v-model:endDate="endDate"
+      v-model:typeFilter="typeFilter"
+      @clear="clearDates"
+    />
 
     <div class="table-card card glass">
       <div v-if="filteredTransactions.length === 0" class="empty-state">
         <ReceiptText :size="48" />
         <p>No transactions found matching your criteria.</p>
+        <button v-if="searchQuery || startDate || endDate || typeFilter !== 'ALL'" @click="clearFilters" class="btn btn-secondary btn-sm">
+          Reset All Filters
+        </button>
       </div>
       <div v-else class="table-wrapper">
         <table class="data-table">
@@ -207,7 +225,7 @@ const viewDetails = (t) => {
                 </div>
               </td>
               <td class="id-cell">
-                <span class="ref-link">#{{ (t._id || '').slice(-8).toUpperCase() || 'REF-ERR' }}</span>
+                <span class="ref-link">{{ formatID(t._id) }}</span>
               </td>
               <td>
                 <div class="status-stack">
@@ -224,11 +242,11 @@ const viewDetails = (t) => {
               </td>
               <td class="entity-cell">
                 <p class="entity-name">{{ t.customer?.name || t.supplier?.name || 'Walk-in Customer' }}</p>
-                <p class="entity-meta">{{ (t.items || []).length }} {{ (t.items || []).length === 1 ? 'item' : 'items' }}</p>
+                <p class="entity-meta">{{ (t.items || []).length }} Items</p>
               </td>
               <td class="text-right total-cell">
                 <span :style="{ color: getStatusColor(t.type) }">
-                  {{ t.type === 'SALE' ? '+' : '-' }}{{ formatPrice(t.total, t.currency) }}
+                  {{ t.type === 'SALE' ? '+' : '-' }}{{ formatCurrency(t.total) }}
                 </span>
               </td>
               <td class="action-col" @click.stop>
@@ -269,26 +287,11 @@ const viewDetails = (t) => {
 .header { display: flex; justify-content: space-between; align-items: flex-end; }
 .header-actions { display: flex; gap: 1rem; align-items: center; }
 
-.date-selector { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; border: 1px solid var(--border-color); }
-.date-selector select { border: none; background: transparent; color: var(--text-color); font-weight: 700; outline: none; cursor: pointer; }
-
-.filters-card { padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 2rem; }
-.search-box { flex: 1; display: flex; align-items: center; gap: 0.75rem; color: var(--text-muted); }
-.search-box input { border: none; background: transparent; outline: none; color: var(--text-color); width: 100%; font-weight: 500; }
-
-.filter-group { display: flex; gap: 1rem; }
-.filter-item { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); background: var(--hover-color); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid var(--border-color); }
-
-/* Technical UI Fix: Contrast Select */
-.contrast-select { border: none; background: transparent; color: var(--text-color); font-weight: 700; outline: none; appearance: none; cursor: pointer; }
-.contrast-select option { background: var(--surface-color); color: var(--text-color); padding: 10px; }
-
 .table-card { padding: 0; overflow: hidden; border-radius: 20px; box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.05); }
 .table-wrapper { overflow-x: auto; max-height: calc(100vh - 400px); }
 
 .data-table { width: 100%; border-collapse: collapse; text-align: left; }
 
-/* Sticky Header */
 .data-table thead th { 
   position: sticky; 
   top: 0; 
@@ -302,7 +305,6 @@ const viewDetails = (t) => {
   border-bottom: 2px solid var(--border-color); 
 }
 
-/* Optimized Row Density */
 .data-table tr { position: relative; }
 .data-table td { padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border-color); transition: all 0.2s; cursor: pointer; }
 .data-table tr:hover td { background: var(--hover-color); }

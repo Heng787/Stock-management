@@ -3,15 +3,17 @@ import * as settingsService from './settingsService.js';
 import { logActivity } from './auditService.js';
 
 export const getAllProducts = async (rawQuery = {}) => {
-  // Whitelist allowed query parameters to prevent NoSQL injection
   const filter = {};
-  if (rawQuery.categoryId) filter.categoryId = rawQuery.categoryId;
-  if (rawQuery.supplierId) filter.supplierId = rawQuery.supplierId;
-  if (rawQuery.status) filter.status = rawQuery.status;
+  // Sanitize inputs by forcing string type
+  if (rawQuery.categoryId) filter.categoryId = String(rawQuery.categoryId);
+  if (rawQuery.supplierId) filter.supplierId = String(rawQuery.supplierId);
+  if (rawQuery.status) filter.status = String(rawQuery.status);
+  
   if (rawQuery.search) {
+    const escapedSearch = String(rawQuery.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     filter.$or = [
-      { name: { $regex: rawQuery.search, $options: 'i' } },
-      { sku: { $regex: rawQuery.search, $options: 'i' } }
+      { name: { $regex: escapedSearch, $options: 'i' } },
+      { sku: { $regex: escapedSearch, $options: 'i' } }
     ];
   }
 
@@ -26,7 +28,6 @@ export const getProductById = async (id) => {
 };
 
 export const createProduct = async (data) => {
-  // Fetch global settings to check if SKU auto-generation is enabled
   const settings = await settingsService.getSettings();
   
   let sku = data.sku;
@@ -34,20 +35,34 @@ export const createProduct = async (data) => {
     sku = `PRD-${Date.now().toString().slice(-6)}`;
   }
 
-  // Ensure empty strings are handled as null for database references
+  const { 
+    name, description, categoryId, supplierId, price, costPrice,
+    minStockLevel, maxStockLevel, quantity, unit, binLocation,
+    batchNumber, expiryDate, image 
+  } = data;
+
   const cleanData = {
-    ...data,
+    name,
+    description,
     sku,
-    categoryId: data.categoryId || null,
-    supplierId: data.supplierId || null
+    price,
+    costPrice: costPrice || 0,
+    minStockLevel: minStockLevel || 0,
+    maxStockLevel: maxStockLevel || 0,
+    quantity: quantity || 0,
+    unit: unit || 'pcs',
+    binLocation,
+    batchNumber,
+    expiryDate,
+    image,
+    categoryId: categoryId || null,
+    supplierId: supplierId || null
   };
 
-  // VALIDATION: Check initial quantity against max capacity
   if (cleanData.maxStockLevel > 0 && (cleanData.quantity || 0) > cleanData.maxStockLevel) {
     throw new Error(`Initial quantity exceeds maximum capacity of ${cleanData.maxStockLevel}`);
   }
 
-  // REQUIREMENT: Handle initial warehouse assignment
   if (data.warehouseId) {
     cleanData.warehouseStock = [{
       warehouse: data.warehouseId,
@@ -57,7 +72,6 @@ export const createProduct = async (data) => {
 
   const product = await Product.create(cleanData);
 
-  // 5. Log activity
   if (data.userId) {
     await logActivity('CREATE', 'PRODUCTS', {
       productId: product._id,
@@ -67,6 +81,21 @@ export const createProduct = async (data) => {
   }
 
   return product;
+};
+
+export const validateBulkProducts = (products) => {
+  if (!Array.isArray(products) || products.length === 0) {
+    throw new Error('Request body must be a non-empty array of products');
+  }
+  if (products.length > 500) {
+    throw new Error('Bulk import limit is 500 products per request');
+  }
+  
+  const invalid = products.filter(item => !item.name || !item.sku || item.price == null);
+  if (invalid.length > 0) {
+    throw new Error(`${invalid.length} item(s) are missing required fields: name, sku, price`);
+  }
+  return true;
 };
 
 export const createProductsBulk = async (dataArray) => {
@@ -79,22 +108,36 @@ export const createProductsBulk = async (dataArray) => {
 };
 
 export const updateProduct = async (id, data) => {
-  data.updatedAt = Date.now();
-  // Ensure empty strings are handled as null for database references
+  const { 
+    name, description, categoryId, supplierId, price, costPrice,
+    minStockLevel, maxStockLevel, quantity, unit, binLocation,
+    batchNumber, expiryDate, image 
+  } = data;
+
   const cleanData = {
-    ...data,
-    categoryId: data.categoryId || null,
-    supplierId: data.supplierId || null
+    name,
+    description,
+    price,
+    costPrice,
+    minStockLevel,
+    maxStockLevel,
+    quantity,
+    unit,
+    binLocation,
+    batchNumber,
+    expiryDate,
+    image,
+    updatedAt: Date.now(),
+    categoryId: categoryId || null,
+    supplierId: supplierId || null
   };
 
-  // VALIDATION: Ensure new quantity/limit doesn't violate rules
   if (cleanData.maxStockLevel > 0 && cleanData.quantity > cleanData.maxStockLevel) {
     throw new Error(`Quantity exceeds updated maximum capacity of ${cleanData.maxStockLevel}`);
   }
 
   const product = await Product.findByIdAndUpdate(id, cleanData, { new: true });
 
-  // Log activity
   if (data.userId) {
     await logActivity('UPDATE', 'PRODUCTS', {
       productId: id,

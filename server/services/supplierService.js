@@ -5,11 +5,13 @@ export const getAllSuppliers = async () => {
 };
 
 export const createSupplier = async (data) => {
-  return await Supplier.create(data);
+  const { name, contactPerson, email, phone, address, categories, rating } = data;
+  return await Supplier.create({ name, contactPerson, email, phone, address, categories, rating });
 };
 
 export const updateSupplier = async (id, data) => {
-  return await Supplier.findByIdAndUpdate(id, data, { new: true });
+  const { name, contactPerson, email, phone, address, categories, rating } = data;
+  return await Supplier.findByIdAndUpdate(id, { name, contactPerson, email, phone, address, categories, rating }, { new: true });
 };
 
 export const deleteSupplier = async (id) => {

@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { useStockStore } from '../../stores/stock';
 import { useUIStore } from '../../stores/ui';
-import { X, Search, Package, ArrowRightLeft, Loader2, AlertCircle } from 'lucide-vue-next';
+import { X, Search, Package, ArrowRightLeft, Loader2, AlertCircle, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -173,7 +173,14 @@ watch(() => props.isOpen, (val) => {
                 <p class="name">{{ selectedProduct.name }}</p>
                 <p class="sku">{{ selectedProduct.sku }}</p>
               </div>
-              <button type="button" class="btn-text" @click="handleRemoveProduct"><Trash2 :size="16" /></button>
+              <button 
+                type="button" 
+                class="btn-remove" 
+                @click="handleRemoveProduct"
+                title="Remove selection"
+              >
+                <Trash2 :size="16" />
+              </button>
             </div>
           </div>
 
@@ -357,7 +364,25 @@ watch(() => props.isOpen, (val) => {
 .selected-product .info { flex: 1; }
 .selected-product .name { font-weight: 800; margin: 0; color: var(--primary-color); }
 .selected-product .sku { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
-.btn-text { background: none; border: none; color: var(--primary-color); font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+.btn-remove {
+  background: var(--error-light);
+  border: none;
+  color: var(--error-color);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove:hover {
+  background: var(--error-color);
+  color: white;
+  transform: scale(1.1);
+}
 
 .helper-box { 
   display: flex; align-items: center; gap: 0.5rem; 

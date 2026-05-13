@@ -24,10 +24,12 @@ export const registerUser = async (userData) => {
 
   if (user) {
     return {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      },
       token: generateToken(user._id)
     };
   } else {
@@ -40,10 +42,12 @@ export const loginUser = async (email, password) => {
 
   if (user && (await user.matchPassword(password))) {
     return {
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      },
       token: generateToken(user._id)
     };
   } else {

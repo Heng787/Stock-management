@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Plus, Minus, Package, Info, CheckCircle2, ShoppingCart, AlertTriangle } from 'lucide-vue-next';
-import { formatPrice } from '../../utils/format';
+import { formatCurrency } from '../../utils/format';
 
 const props = defineProps(['products', 'warehouseId', 'currency']);
 const emit = defineEmits(['add']);
@@ -68,7 +68,7 @@ const onQtyInput = (productId, val, max) => {
         </div>
         
         <div class="p-stats">
-          <div class="price">{{ formatPrice(p.price, currency) }}</div>
+          <div class="price">{{ formatCurrency(p.price, currency) }}</div>
           <div class="stock" :class="{ 'low': getStock(p) < (p.minStockLevel || 10) }">
             <Package :size="12" />
             <span>{{ getStock(p) }} {{ p.unit || 'pcs' }}</span>

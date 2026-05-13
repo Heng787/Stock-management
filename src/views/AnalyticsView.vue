@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useUIStore } from '../stores/ui';
 import client from '../api/client';
 import { 
@@ -11,8 +11,12 @@ import {
   ArrowDownRight,
   Download,
   Calendar,
-  Filter
+  Filter,
+  ArrowRight,
+  XCircle
 } from 'lucide-vue-next';
+import { exportToCSV } from '../utils/export';
+import { formatCurrency } from '../utils/format';
 
 const ui = useUIStore();
 const loading = ref(true);
@@ -25,6 +29,13 @@ const statsData = ref({
 });
 const topProducts = ref([]);
 const salesTrends = ref([]);
+const startDate = ref('');
+const endDate = ref('');
+
+const clearDates = () => {
+  startDate.value = '';
+  endDate.value = '';
+};
 
 const totalValuation = computed(() => {
   return valuationData.value.reduce((sum, item) => sum + item.totalValue, 0);
@@ -33,11 +44,15 @@ const totalValuation = computed(() => {
 const fetchData = async () => {
   loading.value = true;
   try {
+    const params = {};
+    if (startDate.value) params.startDate = startDate.value;
+    if (endDate.value) params.endDate = endDate.value;
+
     const [valRes, statsRes, topRes, trendRes] = await Promise.all([
       client.get('/analytics/valuation'),
-      client.get('/analytics/stats'),
-      client.get('/analytics/top-products'),
-      client.get('/analytics/trends')
+      client.get('/analytics/stats', { params }),
+      client.get('/analytics/top-products', { params }),
+      client.get('/analytics/trends', { params })
     ]);
 
     valuationData.value = valRes.data;
@@ -52,13 +67,32 @@ const fetchData = async () => {
   }
 };
 
-onMounted(fetchData);
 
-const formatCurrency = (val) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(val);
+
+onMounted(fetchData);
+watch([startDate, endDate], fetchData);
+
+const exportReport = () => {
+  const data = [
+    { Section: 'EXECUTIVE SUMMARY', Metric: 'Total Sales', Value: formatCurrency(statsData.value.totalSales) },
+    { Section: 'EXECUTIVE SUMMARY', Metric: 'Inventory Value', Value: formatCurrency(totalValuation.value) },
+    { Section: 'EXECUTIVE SUMMARY', Metric: 'Avg Order Value', Value: formatCurrency(statsData.value.averageOrderValue) },
+    ...valuationData.value.map(v => ({
+      Section: 'VALUATION BY WAREHOUSE',
+      Metric: v.warehouse,
+      Value: formatCurrency(v.totalValue),
+      Items: v.itemCount
+    })),
+    ...topProducts.value.map(p => ({
+      Section: 'TOP SELLING PRODUCTS',
+      Metric: p.name,
+      Value: formatCurrency(p.revenue),
+      Sold: p.sold
+    }))
+  ];
+  ui.notify('Preparing report...', 'info');
+  exportToCSV(data, 'business_intelligence_report');
+  ui.notify('Report downloaded successfully', 'success');
 };
 </script>
 
@@ -70,11 +104,20 @@ const formatCurrency = (val) => {
         <p class="subtitle">Detailed performance metrics and inventory valuation.</p>
       </div>
       <div class="header-actions">
-        <div class="date-picker glass">
-          <Calendar :size="16" />
-          <span>Last 30 Days</span>
+        <div class="date-range-picker glass">
+          <div class="range-field" @click="$refs.startInput.showPicker()">
+            <Calendar :size="14" />
+            <input ref="startInput" type="date" v-model="startDate" title="Start Date" />
+          </div>
+          <ArrowRight :size="14" class="range-arrow" />
+          <div class="range-field" @click="$refs.endInput.showPicker()">
+            <input ref="endInput" type="date" v-model="endDate" title="End Date" />
+          </div>
+          <button v-if="startDate || endDate" class="clear-date-btn" @click="clearDates" title="Clear Filters">
+            <XCircle :size="16" />
+          </button>
         </div>
-        <button class="btn btn-primary">
+        <button class="btn btn-primary" @click="exportReport">
           <Download :size="18" />
           <span>Export Report</span>
         </button>
@@ -185,12 +228,63 @@ const formatCurrency = (val) => {
 .analytics-page { display: flex; flex-direction: column; gap: 2.5rem; animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-.header { display: flex; justify-content: space-between; align-items: flex-end; }
-.title-section h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.03em; }
-.subtitle { color: var(--text-muted); margin-top: 0.5rem; font-size: 1rem; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header-actions { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.title-section h1 { font-size: 2.25rem; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
+.subtitle { color: var(--text-muted); margin-top: 0.25rem; font-size: 1rem; }
 
-.header-actions { display: flex; gap: 1rem; }
-.date-picker { display: flex; align-items: center; gap: 0.75rem; padding: 0 1.25rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; }
+.date-range-picker { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.35rem; 
+  padding: 0.35rem 0.6rem; 
+  border-radius: 12px; 
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color); 
+  transition: all 0.2s ease;
+}
+
+.date-range-picker:hover {
+  border-color: var(--primary-color);
+}
+
+.range-field { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.35rem; 
+  position: relative; 
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+}
+.range-field:hover { background: rgba(255, 255, 255, 0.05); }
+
+.range-field input { 
+  background: transparent; 
+  border: none; 
+  color: var(--text-color); 
+  font-family: inherit; 
+  font-weight: 600; 
+  font-size: 0.8rem; 
+  outline: none; 
+  width: 110px;
+  cursor: pointer;
+  height: 28px;
+}
+
+.clear-date-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+.clear-date-btn:hover { color: var(--error-color); background: rgba(239, 68, 68, 0.1); }
 
 .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 .stat-card { padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; border-radius: 20px; transition: transform 0.3s; }

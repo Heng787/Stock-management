@@ -19,7 +19,9 @@ import {
   Truck,
   Warehouse as WarehouseIcon,
   ReceiptText,
-  Activity
+  Activity,
+  Store,
+  BarChart3
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -40,8 +42,8 @@ const menuGroups = [
     label: 'Transactions',
     items: [
       { name: 'Sales', icon: ShoppingCart, path: '/sales' },
-      { name: 'Purchases', icon: TrendingUp, path: '/purchases' },
-      { name: 'Reports', icon: TrendingUp, path: '/analytics' },
+      { name: 'Purchases', icon: Store, path: '/purchases' },
+      { name: 'Reports', icon: BarChart3, path: '/analytics' },
       { name: 'History', icon: ReceiptText, path: '/transactions' }
     ]
   },
@@ -217,11 +219,18 @@ const handleNavClick = () => {
 .nav-item:hover {
   background: var(--hover-color);
   color: var(--text-color);
+  transform: translateX(6px) scale(1.02);
+}
+
+.nav-item:hover .icon-box {
+  color: var(--primary-color);
+  transform: scale(1.1);
 }
 
 .nav-item.active {
   background: var(--primary-color);
   color: white;
+  box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.3);
 }
 
 .icon-box {
@@ -229,6 +238,7 @@ const handleNavClick = () => {
   align-items: center;
   justify-content: center;
   width: 20px;
+  transition: transform 0.3s var(--spring-easing);
 }
 
 .sidebar-footer {

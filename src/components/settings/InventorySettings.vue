@@ -115,7 +115,16 @@ const handleSave = () => {
   border-radius: 8px;
   padding: 0 1rem;
 }
-.input-inline input { border: none; background: transparent; width: 60px; text-align: right; padding: 0.5rem 0; font-size: 1rem; }
+.input-inline input { 
+  border: none; 
+  background: transparent; 
+  width: 60px; 
+  text-align: right; 
+  padding: 0.5rem 0; 
+  font-size: 1rem; 
+  color: white; 
+  font-weight: 700;
+}
 .input-inline input:focus { outline: none; }
 .input-inline .suffix { color: var(--text-muted); font-weight: 600; margin-left: 0.25rem; }
 

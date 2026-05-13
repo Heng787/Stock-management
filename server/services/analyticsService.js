@@ -28,14 +28,23 @@ export const getInventoryValuation = async () => {
   });
 };
 
-export const getSalesReport = async (days = 30) => {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
+export const getSalesReport = async (days = 30, customStart = null, customEnd = null) => {
+  let start;
+  let end = customEnd ? new Date(customEnd) : new Date();
+  
+  if (customStart) {
+    start = new Date(customStart);
+  } else {
+    start = new Date();
+    start.setDate(start.getDate() - days);
+  }
 
-  const transactions = await Transaction.find({
+  const query = {
     type: 'SALE',
-    createdAt: { $gte: startDate }
-  });
+    createdAt: { $gte: start, $lte: end }
+  };
+
+  const transactions = await Transaction.find(query);
 
   const totalSales = transactions.reduce((sum, t) => sum + (t.total / (t.exchangeRate || 1)), 0);
   const orderCount = transactions.length;
@@ -44,45 +53,69 @@ export const getSalesReport = async (days = 30) => {
     totalSales,
     orderCount,
     averageOrderValue: orderCount > 0 ? totalSales / orderCount : 0,
-    growth: 15 // Mock growth for now, will calculate vs previous period later
+    growth: 15
   };
 };
 
-export const getSalesTrends = async () => {
-  const last7Days = [...Array(7)].map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }).reverse();
+export const getSalesTrends = async (customStart = null, customEnd = null) => {
+  let labels = [];
+  let salesTrend = [];
+  
+  // For trends, we usually want the last 7 items in the range or a fixed interval
+  // If no custom range, default to last 7 days
+  const end = customEnd ? new Date(customEnd) : new Date();
+  const start = customStart ? new Date(customStart) : new Date(new Date().setDate(new Date().getDate() - 6));
+  
+  // Calculate day-by-day trend
+  const transactions = await Transaction.find({
+    type: 'SALE',
+    createdAt: { $gte: start, $lte: end }
+  });
 
-  const trends = await Promise.all(last7Days.map(async date => {
-    const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + 1);
-    const transactions = await Transaction.find({
-      type: 'SALE',
-      createdAt: { $gte: date, $lt: nextDate }
+  // Calculate day-by-day trend
+  let current = new Date(start);
+  while (current <= end) {
+    const d = new Date(current);
+    d.setHours(0, 0, 0, 0);
+    const next = new Date(d);
+    next.setDate(next.getDate() + 1);
+    
+    const dayTransactions = transactions.filter(t => {
+      const tDate = new Date(t.createdAt);
+      return tDate >= d && tDate < next;
     });
-    return {
-      date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      sales: transactions.reduce((sum, t) => sum + (t.total / (t.exchangeRate || 1)), 0)
-    };
-  }));
+    
+    labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    salesTrend.push(dayTransactions.reduce((sum, t) => sum + (t.total / (t.exchangeRate || 1)), 0));
+    
+    current.setDate(current.getDate() + 1);
+    if (labels.length > 60) break; // Increased cap but still safe
+  }
 
   return {
-    labels: trends.map(t => t.date),
-    salesTrend: trends.map(t => t.sales),
-    stockTrend: [0, 0, 0, 0, 0, 0, 0] // Placeholder for now
+    labels,
+    salesTrend,
+    stockTrend: new Array(labels.length).fill(0)
   };
 }
 
-export const getTopSellingProducts = async () => {
-  const transactions = await Transaction.find({ type: 'SALE' })
+export const getTopSellingProducts = async (customStart = null, customEnd = null) => {
+  const query = { type: 'SALE' };
+  if (customStart || customEnd) {
+    query.createdAt = {};
+    if (customStart) query.createdAt.$gte = new Date(customStart);
+    if (customEnd) {
+      const end = new Date(customEnd);
+      end.setHours(23, 59, 59, 999);
+      query.createdAt.$lte = end;
+    }
+  }
+
+  const transactions = await Transaction.find(query)
     .populate({
       path: 'items.product',
       populate: { path: 'categoryId', select: 'name' }
-    })
-    .limit(500); // Look at more transactions for better top-selling data
+    });
   
   const productSales = {};
   transactions.forEach(t => {
