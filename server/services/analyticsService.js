@@ -7,19 +7,25 @@ export const getInventoryValuation = async () => {
   const products = await Product.find({});
   const warehouses = await Warehouse.find({});
   
-  // Calculate valuation per warehouse
-  const valuationByWarehouse = warehouses.map(w => {
-    const warehouseProducts = products.filter(p => p.warehouseId?.toString() === w._id.toString());
-    const totalValue = warehouseProducts.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+  return warehouses.map(w => {
+    let totalValue = 0;
+    let itemCount = 0;
+    
+    products.forEach(p => {
+      const stock = p.warehouseStock?.find(s => s.warehouse?.toString() === w._id.toString());
+      if (stock && stock.quantity > 0) {
+        // Use costPrice for valuation, fallback to price
+        totalValue += stock.quantity * (p.costPrice || p.price || 0);
+        itemCount++;
+      }
+    });
     
     return {
       warehouse: w.name,
-      totalValue: totalValue,
-      itemCount: warehouseProducts.length
+      totalValue,
+      itemCount
     };
   });
-
-  return valuationByWarehouse;
 };
 
 export const getSalesReport = async (days = 30) => {
@@ -31,7 +37,7 @@ export const getSalesReport = async (days = 30) => {
     createdAt: { $gte: startDate }
   });
 
-  const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
+  const totalSales = transactions.reduce((sum, t) => sum + (t.total / (t.exchangeRate || 1)), 0);
   const orderCount = transactions.length;
 
   return {
@@ -59,7 +65,7 @@ export const getSalesTrends = async () => {
     });
     return {
       date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      sales: transactions.reduce((sum, t) => sum + t.total, 0)
+      sales: transactions.reduce((sum, t) => sum + (t.total / (t.exchangeRate || 1)), 0)
     };
   }));
 
@@ -96,7 +102,7 @@ export const getTopSellingProducts = async () => {
         };
       }
       productSales[id].totalSold += item.quantity;
-      productSales[id].revenue += item.quantity * item.price;
+      productSales[id].revenue += (item.quantity * item.price) / (t.exchangeRate || 1);
     });
   });
 

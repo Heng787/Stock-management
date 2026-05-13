@@ -53,6 +53,22 @@ export const useSettingsStore = defineStore('settings', {
         ui.notify('Failed to update settings', 'error');
       }
     },
+    async uploadLogo(file) {
+      const ui = useUIStore();
+      try {
+        const formData = new FormData();
+        formData.append('logo', file);
+        const res = await settingsApi.uploadLogo(formData);
+        // settingsApi.uploadLogo returns the raw response or response.data?
+        // client.js interceptor returns response.data
+        if (res?.success && res?.data?.logo) {
+          this.config.business.logo = res.data.logo;
+          ui.notify('Logo updated successfully', 'success');
+        }
+      } catch (err) {
+        ui.notify(err.error || 'Failed to upload logo', 'error');
+      }
+    },
     applyTheme() {
       const theme = this.config.ui.theme;
       const root = document.documentElement;

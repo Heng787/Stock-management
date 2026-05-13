@@ -24,7 +24,7 @@ export default defineConfig([
   },
 
   {
-    files: ['server/**/*.{js,mjs}'],
+    files: ['server/**/*.{js,mjs}', 'tests/e2e/cypress.config.cjs'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -40,12 +40,20 @@ export default defineConfig([
     files: [
       'cypress/e2e/**/*.{cy,spec}.{js,ts,jsx,tsx}',
       'cypress/support/**/*.{js,ts,jsx,tsx}',
+      'tests/e2e/cypress/e2e/**/*.{cy,spec}.{js,ts,jsx,tsx}',
     ],
   },
 
   {
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/*'],
+  },
+  {
+    files: ['tests/e2e/cypress/e2e/**/*.{cy,spec}.js'],
+    rules: {
+      'vitest/valid-expect': 'off',
+      'vitest/expect-expect': 'off'
+    }
   },
 
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),

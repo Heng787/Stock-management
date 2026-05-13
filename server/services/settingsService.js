@@ -60,6 +60,6 @@ export const clearDatabase = async (currentAdminId) => {
     return { success: true, message: 'Database wiped successfully (Categories and Admin preserved)' };
   } catch (err) {
     console.error('DATABASE WIPE FAILED:', err);
-    throw new Error(`Wipe failed: ${err.message}`);
+    throw new Error(`Wipe failed: ${err.message}`, { cause: err });
   }
 };

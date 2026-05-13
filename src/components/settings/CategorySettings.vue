@@ -3,7 +3,7 @@
 import { ref } from 'vue';
 import { useStockStore } from '../../stores/stock';
 import { useUIStore } from '../../stores/ui';
-import { Tag, Pencil, Trash2, X, Plus } from 'lucide-vue-next';
+import { Pencil, Trash2, X, Plus } from 'lucide-vue-next';
 
 const stock = useStockStore();
 const ui = useUIStore();

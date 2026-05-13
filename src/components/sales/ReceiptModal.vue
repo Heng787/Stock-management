@@ -1,9 +1,9 @@
 <script setup>
-import { ref } from 'vue';
-import { Printer, Download, X, CheckCircle2 } from 'lucide-vue-next';
+import { Printer, X, CheckCircle2 } from 'lucide-vue-next';
+import { formatPrice } from '../../utils/format';
 
-const props = defineProps(['isOpen', 'transaction', 'customer', 'items']);
-const emit = defineEmits(['close']);
+defineProps(['isOpen', 'transaction', 'customer', 'items', 'currency']);
+defineEmits(['close']);
 
 const printReceipt = () => {
   window.print();
@@ -50,7 +50,7 @@ const printReceipt = () => {
             <tr v-for="item in items" :key="item.product">
               <td>{{ item.name }}</td>
               <td>{{ item.quantity }}</td>
-              <td class="text-right">${{ (item.price * item.quantity).toFixed(2) }}</td>
+              <td class="text-right">{{ formatPrice(item.price * item.quantity, currency) }}</td>
             </tr>
           </tbody>
         </table>
@@ -60,23 +60,33 @@ const printReceipt = () => {
         <div class="totals-section">
           <div class="row">
             <span>Subtotal</span>
-            <span>${{ (transaction?.total - (transaction?.tax || 0) + (transaction?.discount || 0)).toFixed(2) }}</span>
+            <span>{{ formatPrice(transaction?.total - (transaction?.tax || 0) + (transaction?.discount || 0), currency) }}</span>
           </div>
           <div class="row" v-if="transaction?.discount > 0">
             <span>Discount</span>
-            <span>-${{ transaction?.discount.toFixed(2) }}</span>
+            <span>-{{ formatPrice(transaction?.discount, currency) }}</span>
           </div>
           <div class="row">
             <span>Tax (10%)</span>
-            <span>${{ transaction?.tax?.toFixed(2) }}</span>
+            <span>{{ formatPrice(transaction?.tax, currency) }}</span>
           </div>
           <div class="row grand-total">
             <span>GRAND TOTAL</span>
-            <span>${{ transaction?.total?.toFixed(2) }}</span>
+            <span>{{ formatPrice(transaction?.total, currency) }}</span>
           </div>
           <div class="row payment-method">
             <span>Payment Method</span>
             <span class="method">{{ transaction?.paymentMethod || 'CASH' }}</span>
+          </div>
+          <div v-if="transaction?.paymentDetails" class="payment-details-summary">
+            <template v-if="transaction.paymentMethod === 'CARD'">
+              <p v-if="transaction.paymentDetails.cardName">Name: {{ transaction.paymentDetails.cardName }}</p>
+              <p v-if="transaction.paymentDetails.cardLast4">Card: **** {{ transaction.paymentDetails.cardLast4 }}</p>
+            </template>
+            <template v-if="transaction.paymentMethod === 'TRANSFER'">
+              <p v-if="transaction.paymentDetails.transferRef">Ref: {{ transaction.paymentDetails.transferRef }}</p>
+              <p v-if="transaction.paymentDetails.transferBank">Bank: {{ transaction.paymentDetails.transferBank }}</p>
+            </template>
           </div>
         </div>
 
@@ -158,6 +168,17 @@ const printReceipt = () => {
 .grand-total { margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #eee; font-size: 1.1rem; font-weight: 900; color: #000; }
 .payment-method { margin-top: 0.25rem; font-size: 0.75rem; }
 .method { text-transform: uppercase; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-weight: 800; }
+.payment-details-summary {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  color: #666;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.payment-details-summary p { margin: 0; }
 
 .receipt-footer { text-align: center; margin-top: 2rem; }
 .receipt-footer p { font-size: 0.8rem; font-weight: 700; color: #999; }

@@ -23,6 +23,15 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const warehouse = await Warehouse.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json({ success: true, data: warehouse });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     await Warehouse.findByIdAndDelete(req.params.id);

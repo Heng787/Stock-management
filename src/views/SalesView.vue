@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useStockStore } from '../stores/stock';
 import { useUIStore } from '../stores/ui';
+import { useSettingsStore } from '../stores/settings';
 import { useRoute } from 'vue-router';
 import { PackageSearch } from 'lucide-vue-next';
 
@@ -12,9 +13,11 @@ import CartSidebar from '../components/sales/CartSidebar.vue';
 
 const stock = useStockStore();
 const ui = useUIStore();
+const settings = useSettingsStore();
 const route = useRoute();
 
 const cart = ref([]);
+const selectedCurrency = ref(settings.config.localization.currency);
 const selectedWarehouseId = ref('');
 const selectedCustomerId = ref(route.query.customerId || '');
 const selectedCategoryId = ref('all');
@@ -129,6 +132,7 @@ watch(selectedWarehouseId, () => {
           v-if="filteredProducts.length > 0"
           :products="filteredProducts"
           :warehouseId="selectedWarehouseId"
+          :currency="selectedCurrency"
           @add="addToCart"
         />
         <div v-else class="empty-category-state card glass">
@@ -146,6 +150,7 @@ watch(selectedWarehouseId, () => {
         v-model:cart="cart"
         v-model:warehouseId="selectedWarehouseId"
         v-model:customerId="selectedCustomerId"
+        v-model:currency="selectedCurrency"
         :warehouses="stock.warehouses"
         :customers="stock.customers"
         @clear="clearCart"

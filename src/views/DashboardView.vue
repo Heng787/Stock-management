@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { useStockStore } from '../stores/stock';
+import { formatPrice, getCurrentRateText } from '../utils/format';
 import { fetchTrends, fetchTopProducts } from '../api/analyticsApi.js';
 import { fetchActivity } from '../api/activityApi.js';
 import TrendGraph from '../components/charts/TrendGraph.vue';
@@ -78,14 +79,14 @@ const stats = computed(() => [
   },
   { 
     label: 'Stock Value', 
-    value: `$${stock.products.reduce((acc, p) => acc + (p.price * p.quantity), 0).toLocaleString()}`, 
+    value: formatPrice(stock.products.reduce((acc, p) => acc + (p.price * p.quantity), 0)), 
     icon: DollarSign, 
     color: 'green',
     trend: stockTrend.value
   },
   { 
     label: 'Weekly Sales', 
-    value: `$${salesTrend.value.reduce((a, b) => a + b, 0).toLocaleString()}`,
+    value: formatPrice(salesTrend.value.reduce((a, b) => a + b, 0)),
     icon: TrendingUp, 
     color: 'purple',
     trend: salesTrend.value
@@ -156,7 +157,7 @@ const handleExport = () => {
     <header class="header">
       <div>
         <h1>Dashboard Overview</h1>
-        <p class="subtitle">Welcome back! Here's what's happening today.</p>
+        <p class="subtitle">Welcome back! Here's what's happening today. <span class="rate-badge">{{ getCurrentRateText() }}</span></p>
       </div>
       <button class="btn btn-primary export-btn" @click="handleExport">
         <Download :size="18" />
@@ -286,7 +287,15 @@ const handleExport = () => {
   align-items: center;
   margin-bottom: 2rem; 
 }
-.subtitle { color: var(--text-muted); margin-top: 0.25rem; }
+.subtitle { color: var(--text-muted); margin-top: 0.25rem; display: flex; align-items: center; gap: 0.75rem; }
+.rate-badge {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
 
 .export-btn {
   display: flex;

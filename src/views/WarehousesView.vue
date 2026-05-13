@@ -17,6 +17,7 @@ const isModalOpen = ref(false);
 const isTransferModalOpen = ref(false);
 const selectedSourceWarehouse = ref('');
 const isSubmitting = ref(false);
+const editingWarehouseId = ref(null);
 const warehouseForm = ref({ 
   name: '', 
   location: '', 
@@ -34,6 +35,25 @@ onMounted(() => {
 const openTransfer = (warehouseId) => {
   selectedSourceWarehouse.value = warehouseId;
   isTransferModalOpen.value = true;
+};
+
+const openEditModal = (w) => {
+  editingWarehouseId.value = w._id;
+  warehouseForm.value = { 
+    name: w.name, 
+    location: w.location || '', 
+    isDefault: w.isDefault || false, 
+    capacity: w.capacity || 1000, 
+    type: w.type || 'Storage', 
+    status: w.status || 'Active' 
+  };
+  isModalOpen.value = true;
+};
+
+const closeMainModal = () => {
+  isModalOpen.value = false;
+  editingWarehouseId.value = null;
+  warehouseForm.value = { name: '', location: '', isDefault: false, capacity: 1000, type: 'Storage', status: 'Active' };
 };
 
 const enrichedWarehouses = computed(() => {
@@ -75,10 +95,14 @@ const handleSubmit = async () => {
 
   isSubmitting.value = true;
   try {
-    await stock.addWarehouse({ ...warehouseForm.value, name: trimmedName, location: trimmedLocation });
-    isModalOpen.value = false;
-    warehouseForm.value = { name: '', location: '', isDefault: false, capacity: 1000, type: 'Storage', status: 'Active' };
-    ui.notify('Warehouse added successfully!', 'success');
+    if (editingWarehouseId.value) {
+      await stock.updateWarehouse(editingWarehouseId.value, { ...warehouseForm.value, name: trimmedName, location: trimmedLocation });
+      ui.notify('Warehouse updated successfully!', 'success');
+    } else {
+      await stock.addWarehouse({ ...warehouseForm.value, name: trimmedName, location: trimmedLocation });
+      ui.notify('Warehouse added successfully!', 'success');
+    }
+    closeMainModal();
   } catch (err) {
     ui.notify(err.error || 'Failed to save warehouse', 'error');
   } finally {
@@ -125,7 +149,13 @@ const getMapsLink = (location) => {
                   </span>
                 </div>
               </div>
-              <button class="btn-icon mini"><Settings :size="14" /></button>
+              <button 
+                class="btn-icon mini" 
+                @click.stop="openEditModal(w)"
+                title="Edit Warehouse"
+              >
+                <Settings :size="14" />
+              </button>
             </div>
 
             <div class="location-link">
@@ -202,8 +232,8 @@ const getMapsLink = (location) => {
     <div v-if="isModalOpen" class="modal-overlay">
       <div class="modal card glass">
         <div class="modal-header">
-          <h3>Register New Location</h3>
-          <button @click="isModalOpen = false" class="close-btn"><X :size="20" /></button>
+          <h3>{{ editingWarehouseId ? 'Edit Warehouse' : 'Register New Location' }}</h3>
+          <button @click="closeMainModal" class="close-btn"><X :size="20" /></button>
         </div>
         <form @submit.prevent="handleSubmit" class="form">
           <div class="form-grid">
@@ -246,9 +276,9 @@ const getMapsLink = (location) => {
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="isModalOpen = false" class="btn btn-secondary">Cancel</button>
+            <button type="button" @click="closeMainModal" class="btn btn-secondary">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
-              {{ isSubmitting ? 'Registering...' : 'Create Location' }}
+              {{ isSubmitting ? 'Saving...' : (editingWarehouseId ? 'Update Warehouse' : 'Create Location') }}
             </button>
           </div>
         </form>
@@ -383,7 +413,11 @@ const getMapsLink = (location) => {
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .input-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.75rem; }
-.input-group select { width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--surface-color); }
+.input-group select { width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid var(--border-color); background: #ffffff; color: #000000; }
+.input-group select option { color: #000; background: #fff; }
+.input-group.checkbox { display: flex; flex-direction: row; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
+.input-group.checkbox input { width: 18px; height: 18px; cursor: pointer; margin: 0; }
+.input-group.checkbox label { margin: 0; cursor: pointer; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

@@ -16,6 +16,7 @@ import {
 import TransactionSummaryCards from '../components/TransactionSummaryCards.vue';
 import BulkActionToolbar from '../components/BulkActionToolbar.vue';
 import TransactionDetailsDrawer from '../components/TransactionDetailsDrawer.vue';
+import { formatPrice } from '../utils/format';
 
 const stock = useStockStore();
 const ui = useUIStore();
@@ -227,7 +228,7 @@ const viewDetails = (t) => {
               </td>
               <td class="text-right total-cell">
                 <span :style="{ color: getStatusColor(t.type) }">
-                  {{ t.type === 'SALE' ? '+' : '-' }}${{ (t.total || 0).toFixed(2) }}
+                  {{ t.type === 'SALE' ? '+' : '-' }}{{ formatPrice(t.total, t.currency) }}
                 </span>
               </td>
               <td class="action-col" @click.stop>

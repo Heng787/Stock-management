@@ -24,6 +24,10 @@ const movementSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  warehouseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Warehouse'
+  },
   timestamp: {
     type: Date,
     default: Date.now

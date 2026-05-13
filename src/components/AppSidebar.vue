@@ -2,6 +2,8 @@
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
+import { useSettingsStore } from '../stores/settings';
+import { resolveApiUrl } from '../utils/format';
 import { 
   LayoutDashboard, 
   Package, 
@@ -23,6 +25,7 @@ import {
 const router = useRouter();
 const auth = useAuthStore();
 const ui = useUIStore();
+const settings = useSettingsStore();
 
 const menuGroups = [
   {
@@ -73,9 +76,10 @@ const handleNavClick = () => {
   <aside class="sidebar glass">
     <div class="logo">
       <div class="logo-icon">
-        <Box :size="24" />
+        <img v-if="settings.config.business.logo" :src="resolveApiUrl(settings.config.business.logo)" class="logo-img" alt="Logo" />
+        <Box v-else :size="24" />
       </div>
-      <span>StockFlow</span>
+      <span>{{ settings.config.business.name || 'StockFlow' }}</span>
       <button 
         @click="ui.toggleTheme" 
         class="theme-toggle" 
@@ -152,6 +156,13 @@ const handleNavClick = () => {
   align-items: center;
   justify-content: center;
   border-radius: 10px;
+  overflow: hidden;
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .theme-toggle {

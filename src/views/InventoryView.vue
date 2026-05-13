@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useStockStore } from '../stores/stock'
 import { useAuthStore } from '../stores/auth'
 import { useUIStore } from '../stores/ui'
+import { formatPrice } from '../utils/format'
 import BulkImportModal from '../components/BulkImportModal.vue'
 import {
   Plus,
@@ -18,7 +19,8 @@ import {
   Image as ImageIcon,
   Trash2,
   PlusCircle,
-  MinusCircle
+  MinusCircle,
+  Pencil
 } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import client from '../api/client'
@@ -50,8 +52,12 @@ const showAddModal = ref(false)
 const showStockModal = ref(false)
 const showImportModal = ref(false)
 const selectedProduct = ref(null)
+const editingProductId = ref(null)
 const stockAction = ref('IN') // 'IN' or 'OUT'
 const isSubmitting = ref(false)
+const showHistoryModal = ref(false)
+const historyData = ref([])
+const isLoadingHistory = ref(false)
 
 const generateSKU = () => {
   const prefix = 'STK'
@@ -61,6 +67,7 @@ const generateSKU = () => {
 }
 
 const openAddModal = () => {
+  editingProductId.value = null
   newProduct.value = {
     sku: generateSKU(),
     name: '',
@@ -72,6 +79,27 @@ const openAddModal = () => {
     quantity: 0,
   }
   showAddModal.value = true
+}
+
+const openEditModal = (product) => {
+  editingProductId.value = product._id
+  newProduct.value = {
+    sku: product.sku,
+    name: product.name,
+    description: product.description || '',
+    categoryId: product.categoryId?._id || product.categoryId || '',
+    supplierId: product.supplierId?._id || product.supplierId || '',
+    price: product.price,
+    minStockLevel: product.minStockLevel,
+    quantity: product.quantity, // Note: quantity usually shouldn't be edited directly here but via movements
+    image: product.image || ''
+  }
+  showAddModal.value = true
+}
+
+const closeProductModal = () => {
+  showAddModal.value = false
+  editingProductId.value = null
 }
 
 // Filtered products
@@ -102,8 +130,27 @@ const openStockModal = (product, action) => {
   showStockModal.value = true
 }
 
-const openHistory = (product) => {
-  ui.notify(`Opening history for ${product.name}...`, 'info');
+const openHistory = async (product) => {
+  selectedProduct.value = product
+  showHistoryModal.value = true
+  isLoadingHistory.value = true
+  try {
+    const res = await client.get(`/movements/${product._id}`)
+    historyData.value = res.data
+  } catch (err) {
+    ui.notify(err.error || 'Failed to load history', 'error')
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
+const formatDateShort = (dateString) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 // Form Refs
@@ -166,9 +213,14 @@ const handleAddProduct = async () => {
   }
   isSubmitting.value = true
   try {
-    await stock.addProduct(newProduct.value)
-    showAddModal.value = false
-    ui.notify('Product created successfully!', 'success')
+    if (editingProductId.value) {
+      await stock.updateProduct(editingProductId.value, newProduct.value)
+      ui.notify('Product updated successfully!', 'success')
+    } else {
+      await stock.addProduct(newProduct.value)
+      ui.notify('Product created successfully!', 'success')
+    }
+    closeProductModal()
     newProduct.value = {
       sku: '',
       name: '',
@@ -181,7 +233,7 @@ const handleAddProduct = async () => {
       quantity: 0,
     }
   } catch (err) {
-    ui.notify(err.error || 'Failed to add product', 'error')
+    ui.notify(err.error || 'Failed to save product', 'error')
   } finally {
     isSubmitting.value = false
   }
@@ -329,7 +381,7 @@ const handleBulkImport = async (parsedData) => {
             <h3 class="name">{{ p.name }}</h3>
             <p class="sku">{{ p.sku }}</p>
             <div class="price-row">
-              <span class="price">${{ p.price.toFixed(2) }}</span>
+              <span class="price">{{ formatPrice(p.price) }}</span>
               <span class="quantity">{{ p.quantity }} {{ p.unit || 'units' }}</span>
             </div>
             
@@ -356,6 +408,7 @@ const handleBulkImport = async (parsedData) => {
             <button @click="openStockModal(p, 'IN')" class="action-btn in" title="Stock In"><PlusCircle :size="16" /></button>
             <button @click="openStockModal(p, 'OUT')" class="action-btn out" title="Stock Out"><MinusCircle :size="16" /></button>
             <button @click="openStockModal(p, 'ADJUSTMENT')" class="action-btn adjust" title="Adjust / Return"><AlertTriangle :size="16" /></button>
+            <button @click="openEditModal(p)" class="action-btn edit" title="Edit Product"><Pencil :size="16" /></button>
             <button @click="openHistory(p)" class="action-btn history" title="View History"><History :size="16" /></button>
             <button @click="handleDeleteProduct(p)" class="action-btn delete" title="Delete Product"><Trash2 :size="16" /></button>
           </div>
@@ -389,7 +442,7 @@ const handleBulkImport = async (parsedData) => {
                 </div>
               </td>
               <td>{{ p.categoryId?.name }}</td>
-              <td class="font-bold">${{ p.price.toFixed(2) }}</td>
+              <td class="font-bold">{{ formatPrice(p.price) }}</td>
               <td>
                 <div class="stock-level">
                   <span 
@@ -423,6 +476,7 @@ const handleBulkImport = async (parsedData) => {
                   <button @click="openStockModal(p, 'IN')" class="action-icon in" title="Stock In"><PlusCircle :size="18" /></button>
                   <button @click="openStockModal(p, 'OUT')" class="action-icon out" title="Stock Out"><MinusCircle :size="18" /></button>
                   <button @click="openStockModal(p, 'ADJUSTMENT')" class="action-icon adjust" title="Adjust / Return"><AlertTriangle :size="18" /></button>
+                  <button @click="openEditModal(p)" class="action-icon edit" title="Edit Product"><Pencil :size="18" /></button>
                   <button @click="openHistory(p)" class="action-icon info" title="View History"><History :size="18" /></button>
                   <button @click="handleDeleteProduct(p)" class="action-icon delete" title="Delete Product"><Trash2 :size="18" /></button>
                 </div>
@@ -445,8 +499,8 @@ const handleBulkImport = async (parsedData) => {
     <div v-if="showAddModal" class="modal-overlay">
       <div class="modal card">
         <div class="modal-header">
-          <h3>Create New Product</h3>
-          <button @click="showAddModal = false" class="close-btn" aria-label="Close modal">
+          <h3>{{ editingProductId ? 'Edit Product' : 'Create New Product' }}</h3>
+          <button @click="closeProductModal" class="close-btn" aria-label="Close modal">
             <X :size="20" />
           </button>
         </div>
@@ -472,7 +526,7 @@ const handleBulkImport = async (parsedData) => {
           </div>
           <div class="form-grid">
             <div class="input-group">
-              <label>Price ($)</label>
+              <label>Price</label>
               <input v-model.number="newProduct.price" type="number" step="0.01" required />
             </div>
             <div class="input-group">
@@ -512,10 +566,12 @@ const handleBulkImport = async (parsedData) => {
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" @click="showAddModal = false" class="btn btn-secondary">
+            <button type="button" @click="closeProductModal" class="btn btn-secondary">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary">Create Product</button>
+            <button type="submit" class="btn btn-primary">
+              {{ editingProductId ? 'Update Product' : 'Create Product' }}
+            </button>
           </div>
         </form>
       </div>
@@ -573,6 +629,56 @@ const handleBulkImport = async (parsedData) => {
       </div>
     </div>
 
+    <!-- Product History Modal -->
+    <div v-if="showHistoryModal" class="modal-overlay">
+      <div class="modal card">
+        <div class="modal-header">
+          <div class="h-title">
+            <History :size="20" />
+            <h3>History: {{ selectedProduct?.name }}</h3>
+          </div>
+          <button @click="showHistoryModal = false" class="close-btn"><X :size="20" /></button>
+        </div>
+        
+        <div class="history-content">
+          <div v-if="isLoadingHistory" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading movement records...</p>
+          </div>
+          <div v-else-if="historyData.length === 0" class="empty-history">
+            <History :size="48" />
+            <p>No stock movements recorded for this product yet.</p>
+          </div>
+          <div v-else class="history-list">
+            <div v-for="m in historyData" :key="m._id" class="history-item">
+              <div class="m-type-icon" :class="m.type.toLowerCase()">
+                <PlusCircle v-if="m.type === 'IN'" :size="14" />
+                <MinusCircle v-else-if="m.type === 'OUT'" :size="14" />
+                <AlertTriangle v-else :size="14" />
+              </div>
+              <div class="m-info">
+                <div class="m-top">
+                  <span class="m-type">{{ m.type }}</span>
+                  <span class="m-qty" :class="m.type.toLowerCase()">
+                    {{ m.type === 'OUT' ? '-' : '+' }}{{ m.quantity }}
+                  </span>
+                  <span class="m-date">{{ formatDateShort(m.timestamp) }}</span>
+                </div>
+                <div class="m-bottom">
+                  <span class="m-reason">{{ m.reason }}</span>
+                  <span class="m-user">by {{ m.userId?.name || 'System' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="showHistoryModal = false" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Bulk Import Modal -->
     <BulkImportModal
       :isOpen="showImportModal"
@@ -625,6 +731,53 @@ const handleBulkImport = async (parsedData) => {
 .bar-fill.critical { background: #ef4444; }
 .bar-fill.warning { background: #f59e0b; }
 .bar-fill.overstock { background: #8b5cf6; }
+.action-btn.edit:hover { background: #f3e8ff; color: #a855f7; border-color: #a855f7; }
+.action-icon.edit:hover { background: #f3e8ff; color: #a855f7; border-color: #a855f7; }
+
+/* History Modal Styles */
+.h-title { display: flex; align-items: center; gap: 0.75rem; color: var(--primary-color); }
+.h-title h3 { margin: 0; color: var(--text-color); font-size: 1.1rem; }
+
+.history-content { max-height: 400px; overflow-y: auto; margin: 1rem 0; padding-right: 0.5rem; }
+
+.history-item { 
+  display: flex; gap: 1rem; padding: 1rem; border-radius: 12px; 
+  background: var(--bg-color); border: 1px solid var(--border-color);
+  margin-bottom: 0.75rem;
+}
+
+.m-type-icon { 
+  width: 32px; height: 32px; border-radius: 50%; 
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.m-type-icon.in { background: var(--success-light); color: var(--success-color); }
+.m-type-icon.out { background: var(--error-light); color: var(--error-color); }
+.m-type-icon.adjustment { background: var(--warning-light); color: var(--warning-color); }
+
+.m-info { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+.m-top { display: flex; align-items: center; gap: 0.75rem; }
+.m-type { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.m-qty { font-weight: 800; font-size: 0.9rem; }
+.m-qty.in { color: var(--success-color); }
+.m-qty.out { color: var(--error-color); }
+.m-date { margin-left: auto; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+
+.m-bottom { display: flex; justify-content: space-between; font-size: 0.8rem; }
+.m-reason { color: var(--text-color); font-weight: 500; }
+.m-user { color: var(--text-muted); font-style: italic; }
+
+.loading-state, .empty-history { 
+  display: flex; flex-direction: column; align-items: center; 
+  justify-content: center; padding: 3rem; color: var(--text-muted); gap: 1rem;
+}
+
+.spinner { 
+  width: 24px; height: 24px; border: 3px solid var(--border-color); 
+  border-top-color: var(--primary-color); border-radius: 50%; 
+  animation: spin 0.8s linear infinite; 
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .search-wrapper {
   position: relative;
@@ -809,6 +962,9 @@ const handleBulkImport = async (parsedData) => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+.modal-form input, .modal-form select, .modal-form textarea {
+  color: white;
 }
 .form-grid {
   display: grid;

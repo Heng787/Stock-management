@@ -1,7 +1,6 @@
-/* global describe, it, expect, cy */
 describe('Baseline', () => {
   it('should pass a simple assertion', () => {
-    expect(true).to.equal(true);
+    expect(true).to.be.true;
   });
 
   it('should visit the login page', () => {

@@ -397,7 +397,7 @@ const getTierColor = (tier) => {
 .form { display: flex; flex-direction: column; gap: 1.5rem; }
 .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .input-group label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; }
-.input-group input, .input-group textarea { width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--surface-color); }
+.input-group input, .input-group textarea { width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--surface-color); color: white; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

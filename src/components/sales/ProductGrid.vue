@@ -1,8 +1,9 @@
 <script setup>
 import { ref } from 'vue';
 import { Plus, Minus, Package, Info, CheckCircle2, ShoppingCart, AlertTriangle } from 'lucide-vue-next';
+import { formatPrice } from '../../utils/format';
 
-const props = defineProps(['products', 'warehouseId']);
+const props = defineProps(['products', 'warehouseId', 'currency']);
 const emit = defineEmits(['add']);
 
 // Local qty state for each product card
@@ -39,6 +40,13 @@ const updateLocalQty = (productId, delta, max) => {
     localQtys.value[productId] = next;
   }
 };
+
+const onQtyInput = (productId, val, max) => {
+  let num = parseInt(val);
+  if (isNaN(num) || num < 1) num = 1;
+  if (num > max) num = max;
+  localQtys.value[productId] = num;
+};
 </script>
 
 <template>
@@ -60,7 +68,7 @@ const updateLocalQty = (productId, delta, max) => {
         </div>
         
         <div class="p-stats">
-          <div class="price">${{ p.price.toFixed(2) }}</div>
+          <div class="price">{{ formatPrice(p.price, currency) }}</div>
           <div class="stock" :class="{ 'low': getStock(p) < (p.minStockLevel || 10) }">
             <Package :size="12" />
             <span>{{ getStock(p) }} {{ p.unit || 'pcs' }}</span>
@@ -77,7 +85,14 @@ const updateLocalQty = (productId, delta, max) => {
       <div class="card-actions" v-if="getStock(p) > 0">
         <div class="qty-selector">
           <button @click.stop="updateLocalQty(p._id, -1, getStock(p))"><Minus :size="14" /></button>
-          <span>{{ localQtys[p._id] || 1 }}</span>
+          <input 
+            type="number" 
+            :value="localQtys[p._id] || 1" 
+            @input="e => onQtyInput(p._id, e.target.value, getStock(p))"
+            @click.stop
+            min="1"
+            :max="getStock(p)"
+          />
           <button @click.stop="updateLocalQty(p._id, 1, getStock(p))"><Plus :size="14" /></button>
         </div>
         <button class="add-btn" @click.stop="handleAdd(p)" title="Add to Cart">
@@ -114,7 +129,7 @@ const updateLocalQty = (productId, delta, max) => {
   padding: 1.25rem;
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1.5px solid var(--border-color);
+  border: 2px solid var(--border-color);
   background: var(--bg-surface);
   border-radius: 20px;
 }
@@ -201,7 +216,22 @@ const updateLocalQty = (productId, delta, max) => {
   transform: scale(1.1); 
 }
 
-.qty-selector span { font-weight: 800; font-size: 1rem; color: var(--text-color); min-width: 24px; text-align: center; }
+.qty-selector input { 
+  width: 50px;
+  background: transparent;
+  border: none;
+  font-weight: 800; 
+  font-size: 1rem; 
+  color: var(--text-color); 
+  text-align: center;
+  outline: none;
+  appearance: textfield;
+}
+.qty-selector input::-webkit-inner-spin-button,
+.qty-selector input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 .add-btn {
   width: 48px;

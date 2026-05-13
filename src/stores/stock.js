@@ -95,6 +95,12 @@ export const useStockStore = defineStore('stock', {
       this.warehouses.push(res.data);
       return res.data;
     },
+    async updateWarehouse(id, data) {
+      const res = await client.put(`/warehouses/${id}`, data);
+      const index = this.warehouses.findIndex(w => w._id === id);
+      if (index !== -1) this.warehouses[index] = res.data;
+      return res.data;
+    },
     async createTransaction(transactionData) {
       const res = await client.post('/transactions', transactionData);
       this.transactions.unshift(res.data);

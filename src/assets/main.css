@@ -36,12 +36,12 @@
   --surface-color: #1e293b;
   --bg-surface: rgba(15, 23, 42, 0.6);
   --hover-color: #334155;
-  --border-color: rgba(30, 41, 59, 0.5);
+  --border-color: rgba(255, 255, 255, 0.12);
   --text-color: #f8fafc;
   --text-muted: #94a3b8;
   --primary-light: rgba(37, 99, 235, 0.2);
   --glass-bg: rgba(15, 23, 42, 0.8);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.15);
 }
 
 /* Accessibility */

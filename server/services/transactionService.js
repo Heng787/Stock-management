@@ -10,12 +10,12 @@ export const createTransaction = async (data, userId) => {
   if (!items || items.length === 0) throw new Error('No items provided');
   if (items.some(i => i.quantity <= 0)) throw new Error('Quantities must be positive');
 
-  let total = 0;
+
 
   // Process items sequentially
   for (const item of items) {
     const adjustment = type === 'SALE' ? -item.quantity : item.quantity;
-    total += item.price * item.quantity;
+    // total += item.price * item.quantity; // We now use the total passed from frontend
 
     // 1. Check if warehouse entry exists
     let product = await Product.findOne({ _id: item.product });
@@ -56,6 +56,10 @@ export const createTransaction = async (data, userId) => {
     }
   }
 
+  const exchangeRate = data.exchangeRate || 1;
+  const total = data.total; 
+  const totalUSD = total / exchangeRate;
+
   const transactionData = {
     ...data,
     total,
@@ -69,14 +73,14 @@ export const createTransaction = async (data, userId) => {
 
   if (type === 'SALE') {
     await Customer.findByIdAndUpdate(entityId, {
-      $inc: { totalSpent: total, orderCount: 1 }
+      $inc: { totalSpent: totalUSD, orderCount: 1 }
     });
 
     // Notify of new sale
     await createNotification({
       type: 'SALE',
       title: 'New Sale Completed',
-      message: `Order #${transaction._id.toString().slice(-6).toUpperCase()} processed successfully ($${total.toFixed(2)})`,
+      message: `Order #${transaction._id.toString().slice(-6).toUpperCase()} processed successfully (${data.currency || 'USD'} ${total.toFixed(2)})`,
       link: '/history'
     });
   }

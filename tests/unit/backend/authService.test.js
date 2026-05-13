@@ -1,3 +1,4 @@
+/* global jest, describe, beforeEach, it, expect */
 import { loginUser } from '../../../server/services/authService';
 import User from '../../../server/models/User';
 import jwt from 'jsonwebtoken';

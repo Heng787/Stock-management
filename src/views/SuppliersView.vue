@@ -328,6 +328,8 @@ const handleDelete = async (id) => {
 .toolbar-right { display: flex; gap: 1rem; align-items: center; }
 .filter-item { display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted); background: var(--hover-color); padding: 0.5rem 0.75rem; border-radius: 10px; border: 1.5px solid var(--border-color); }
 
+.input-group input, .input-group textarea { width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--surface-color); color: white; }
+
 .contrast-select { border: none; background: transparent; color: var(--text-color); font-weight: 700; outline: none; appearance: none; cursor: pointer; font-size: 0.85rem; }
 .contrast-select option { background: var(--surface-color); color: var(--text-color); padding: 10px; }
 

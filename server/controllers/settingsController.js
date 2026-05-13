@@ -58,7 +58,7 @@ export const triggerBackup = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-export const clearDatabase = async (req, res, next) => {
+export const clearDatabase = async (req, res) => {
   try {
     const result = await settingsService.clearDatabase(req.user._id);
     res.json(result);

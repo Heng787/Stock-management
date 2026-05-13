@@ -1,8 +1,9 @@
 <script setup>
-import { X, Calendar, User, Package, DollarSign, Tag, ShoppingCart, TrendingUp, Printer, FileText } from 'lucide-vue-next';
+import { X, Calendar, User, Package, Printer, FileText } from 'lucide-vue-next';
+import { formatPrice } from '../utils/format';
 
-const props = defineProps(['isOpen', 'transaction']);
-const emit = defineEmits(['close']);
+defineProps(['isOpen', 'transaction']);
+defineEmits(['close']);
 
 const getStatusColor = (type) => {
   return type === 'SALE' ? '#10b981' : '#ef4444';
@@ -80,9 +81,9 @@ const formatDate = (dateString) => {
               <div v-for="item in transaction.items" :key="item.product" class="item-row">
                 <div class="item-main">
                   <span class="item-name">{{ item.name }}</span>
-                  <span class="item-qty">{{ item.quantity }} x ${{ item.price.toFixed(2) }}</span>
+                  <span class="item-qty">{{ item.quantity }} x {{ formatPrice(item.price, transaction.currency) }}</span>
                 </div>
-                <span class="item-total">${{ (item.quantity * item.price).toFixed(2) }}</span>
+                <span class="item-total">{{ formatPrice(item.quantity * item.price, transaction.currency) }}</span>
               </div>
             </div>
           </div>
@@ -91,20 +92,20 @@ const formatDate = (dateString) => {
           <div class="summary-section card">
             <div class="summary-row">
               <span>Subtotal</span>
-              <span>${{ (transaction.total - (transaction.tax || 0) + (transaction.discount || 0)).toFixed(2) }}</span>
+              <span>{{ formatPrice(transaction.total - (transaction.tax || 0) + (transaction.discount || 0), transaction.currency) }}</span>
             </div>
             <div class="summary-row" v-if="transaction.discount > 0">
               <span>Discount</span>
-              <span class="discount">-${{ transaction.discount.toFixed(2) }}</span>
+              <span class="discount">-{{ formatPrice(transaction.discount, transaction.currency) }}</span>
             </div>
             <div class="summary-row">
               <span>Tax (10%)</span>
-              <span>${{ (transaction.tax || 0).toFixed(2) }}</span>
+              <span>{{ formatPrice(transaction.tax || 0, transaction.currency) }}</span>
             </div>
             <div class="summary-row total">
               <span>Grand Total</span>
               <span :style="{ color: getStatusColor(transaction.type) }">
-                {{ transaction.type === 'SALE' ? '+' : '-' }}${{ transaction.total.toFixed(2) }}
+                {{ transaction.type === 'SALE' ? '+' : '-' }}{{ formatPrice(transaction.total, transaction.currency) }}
               </span>
             </div>
             <div class="summary-row payment">

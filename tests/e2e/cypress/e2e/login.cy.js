@@ -1,4 +1,3 @@
-/* global describe, it, expect, cy, Cypress */
 describe('Login Flow', () => {
   beforeEach(() => {
     cy.visit('/login');
